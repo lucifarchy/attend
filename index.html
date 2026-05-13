@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>전자 출결 등록부</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a2e;
+    --ink-light: #2d2d4e;
+    --paper: #f5f0e8;
+    --paper-dark: #ede7d9;
+    --gold: #c9a84c;
+    --gold-light: #e8c96e;
+    --red: #c0392b;
+    --green: #27ae60;
+    --line: rgba(26,26,46,0.15);
+    --shadow: rgba(26,26,46,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Serif KR', serif;
+    background: #2a2418;
+    min-height: 100vh;
+    padding: 24px 16px;
+    background-image: 
+      radial-gradient(ellipse at top left, #3d3020 0%, transparent 50%),
+      radial-gradient(ellipse at bottom right, #1a1008 0%, transparent 60%);
+  }
+
+  .book-wrapper {
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+    perspective: 1200px;
+  }
+
+  .book-cover {
+    background: linear-gradient(135deg, #1a1a2e 0%, #2d1b69 50%, #1a1a2e 100%);
+    border-radius: 4px 12px 12px 4px;
+    box-shadow: 
+      -8px 0 20px rgba(0,0,0,0.5),
+      8px 0 30px rgba(0,0,0,0.4),
+      inset -3px 0 6px rgba(0,0,0,0.3);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .book-spine {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 24px;
+    background: linear-gradient(180deg, #0d0d1a, #1a1a3e, #0d0d1a);
+    border-right: 1px solid rgba(201,168,76,0.3);
+  }
+
+  .book-content {
+    margin-left: 24px;
+    background: var(--paper);
+    min-height: 100vh;
+    padding: 0;
+    position: relative;
+  }
+
+  /* 페이지 줄 배경 */
+  .book-content::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: repeating-linear-gradient(
+      transparent,
+      transparent 35px,
+      var(--line) 35px,
+      var(--line) 36px
+    );
+    pointer-events: none;
+    opacity: 0.4;
+  }
+
+  /* 헤더 */
+  .registry-header {
+    background: linear-gradient(135deg, var(--ink) 0%, var(--ink-light) 100%);
+    color: var(--paper);
+    padding: 32px 40px 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .registry-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold), var(--gold-light), var(--gold), transparent);
+  }
+
+  .header-ornament {
+    text-align: center;
+    color: var(--gold);
+    font-size: 11px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    opacity: 0.8;
+  }
+
+  .registry-title {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 8px;
+    color: var(--paper);
+    margin-bottom: 6px;
+  }
+
+  .registry-subtitle {
+    text-align: center;
+    font-size: 13px;
+    color: var(--gold);
+    letter-spacing: 3px;
+    margin-bottom: 20px;
+  }
+
+  .header-meta {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    font-family: 'DM Mono', monospace;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+
+  .meta-item {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 6px;
+    padding: 10px 24px;
+    white-space: nowrap;
+  }
+
+  .meta-field {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    white-space: nowrap;
+  }
+
+  .meta-field + .meta-field {
+    border-left: 1px solid rgba(201,168,76,0.25);
+  }
+
+  .meta-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    opacity: 0.85;
+    white-space: nowrap;
+  }
+
+  .meta-value {
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: var(--paper);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  /* 통계 바 */
+  .stats-bar {
+    display: flex;
+    gap: 0;
+    padding: 16px 40px;
+    background: var(--paper-dark);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .stat-card {
+    flex: 1;
+    text-align: center;
+    padding: 8px 12px;
+    border-right: 1px solid var(--line);
+  }
+  .stat-card:last-child { border-right: none; }
+
+  .stat-num {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--ink);
+    font-family: 'DM Mono', monospace;
+    line-height: 1;
+  }
+  .stat-num.green { color: var(--green); }
+  .stat-num.red { color: var(--red); }
+  .stat-num.gold { color: var(--gold); }
+
+  .stat-label {
+    font-size: 10px;
+    color: rgba(26,26,46,0.5);
+    letter-spacing: 2px;
+    margin-top: 4px;
+  }
+
+  /* 입력 폼 */
+  .form-section {
+    padding: 28px 40px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(201,168,76,0.04);
+    position: relative;
+  }
+
+  .form-section-title {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--gold);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .form-section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--gold), transparent);
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--ink-light);
+    opacity: 0.7;
+  }
+
+  input[type="text"], input[type="date"], select {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.6);
+    border: 1px solid var(--line);
+    border-bottom: 2px solid var(--ink);
+    border-radius: 2px;
+    color: var(--ink);
+    outline: none;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+  }
+
+  input:focus, select:focus {
+    background: rgba(255,255,255,0.9);
+    border-bottom-color: var(--gold);
+    box-shadow: 0 2px 0 var(--gold);
+  }
+
+  /* 서명 캔버스 */
+  .signature-area {
+    border: 1px solid var(--line);
+    border-bottom: 2px solid var(--ink);
+    border-radius: 2px;
+    background: rgba(255,255,255,0.6);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .signature-label-inside {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    color: rgba(26,26,46,0.2);
+    letter-spacing: 2px;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  #signatureCanvas {
+    display: block;
+    width: 100%;
+    height: 150px;
+    cursor: crosshair;
+    touch-action: none;
+  }
+
+  .sig-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .btn-clear {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    padding: 5px 12px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink-light);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  .btn-clear:hover {
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  /* 출결 버튼 */
+  .attendance-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .att-btn {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    padding: 14px;
+    border: 2px solid;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .att-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .att-btn:hover::before { opacity: 1; }
+
+  .att-btn.present {
+    border-color: var(--green);
+    color: var(--green);
+    background: transparent;
+  }
+  .att-btn.present::before { background: var(--green); }
+  .att-btn.present:hover { color: white; }
+
+  .att-btn.late {
+    border-color: var(--gold);
+    color: var(--gold);
+    background: transparent;
+  }
+  .att-btn.late::before { background: var(--gold); }
+  .att-btn.late:hover { color: white; }
+
+  .att-btn.absent {
+    border-color: var(--red);
+    color: var(--red);
+    background: transparent;
+  }
+  .att-btn.absent::before { background: var(--red); }
+  .att-btn.absent:hover { color: white; }
+
+  .att-btn span { position: relative; z-index: 1; }
+
+  /* 등록부 테이블 */
+  .registry-section {
+    padding: 28px 40px;
+    position: relative;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-title::before {
+    content: '';
+    width: 4px;
+    height: 16px;
+    background: var(--gold);
+    border-radius: 2px;
+  }
+
+  .search-box {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-bottom: 2px solid var(--ink);
+    background: rgba(255,255,255,0.6);
+    border-radius: 2px;
+    color: var(--ink);
+    outline: none;
+    width: 200px;
+  }
+
+  .search-box:focus { border-bottom-color: var(--gold); }
+
+  .registry-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .registry-table thead tr {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .registry-table th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 3px;
+    font-weight: 600;
+  }
+
+  .registry-table tbody tr {
+    border-bottom: 1px solid var(--line);
+    transition: background 0.15s;
+  }
+
+  .registry-table tbody tr:hover {
+    background: rgba(201,168,76,0.06);
+  }
+
+  .registry-table td {
+    padding: 10px 14px;
+    vertical-align: middle;
+  }
+
+  .num-cell {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: rgba(26,26,46,0.4);
+    width: 36px;
+  }
+
+  .time-cell {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: rgba(26,26,46,0.5);
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 2px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+
+  .status-badge.present { border-color: var(--green); color: var(--green); background: rgba(39,174,96,0.08); }
+  .status-badge.late { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.08); }
+  .status-badge.absent { border-color: var(--red); color: var(--red); background: rgba(192,57,43,0.08); }
+
+  .sig-thumb {
+    width: 80px;
+    height: 30px;
+    object-fit: contain;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: white;
+  }
+
+  .no-sig {
+    font-size: 10px;
+    color: rgba(26,26,46,0.3);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .del-btn {
+    font-size: 11px;
+    padding: 3px 8px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: rgba(26,26,46,0.4);
+    cursor: pointer;
+    border-radius: 2px;
+    font-family: 'DM Mono', monospace;
+    transition: all 0.2s;
+  }
+
+  .del-btn:hover { border-color: var(--red); color: var(--red); }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: rgba(26,26,46,0.3);
+    font-size: 13px;
+    letter-spacing: 2px;
+  }
+
+  /* 푸터 */
+  .registry-footer {
+    padding: 20px 40px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--paper-dark);
+  }
+
+  .footer-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: rgba(26,26,46,0.35);
+    letter-spacing: 1px;
+  }
+
+  .export-btn {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    padding: 8px 20px;
+    background: var(--ink);
+    color: var(--gold);
+    border: 1px solid var(--gold);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  .export-btn:hover { background: var(--gold); color: var(--ink); }
+
+  /* 토스트 */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--ink);
+    color: var(--gold);
+    padding: 12px 24px;
+    border-radius: 4px;
+    font-size: 13px;
+    letter-spacing: 2px;
+    border: 1px solid var(--gold);
+    transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
+    z-index: 100;
+    white-space: nowrap;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* 필터 탭 */
+  .filter-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 16px;
+  }
+
+  .filter-tab {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    padding: 6px 16px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: rgba(26,26,46,0.5);
+    cursor: pointer;
+    border-right: none;
+    transition: all 0.2s;
+  }
+
+  .filter-tab:last-child { border-right: 1px solid var(--line); }
+  .filter-tab:first-child { border-radius: 2px 0 0 2px; }
+  .filter-tab:last-child { border-radius: 0 2px 2px 0; }
+
+  .filter-tab.active {
+    background: var(--ink);
+    color: var(--gold);
+    border-color: var(--ink);
+  }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .attendance-buttons { grid-template-columns: 1fr; }
+    .stats-bar { flex-wrap: wrap; }
+    .stat-card { min-width: 50%; border-bottom: 1px solid var(--line); }
+    .registry-header, .form-section, .registry-section, .registry-footer { padding-left: 20px; padding-right: 20px; }
+    .stats-bar { padding: 16px 20px; }
+    .section-header { flex-direction: column; gap: 10px; align-items: flex-start; }
+  }
+
+  /* 관리자 잠금 */
+  .admin-lock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 52px 20px;
+    gap: 12px;
+  }
+
+  .lock-icon {
+    font-size: 36px;
+    margin-bottom: 4px;
+  }
+
+  .lock-title {
+    font-size: 14px;
+    letter-spacing: 6px;
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .lock-desc {
+    font-size: 12px;
+    color: rgba(26,26,46,0.45);
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  .lock-input-wrap {
+    display: flex;
+    gap: 0;
+  }
+
+  .lock-input {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    padding: 10px 16px;
+    border: 1px solid var(--ink);
+    border-right: none;
+    border-radius: 2px 0 0 2px;
+    background: rgba(255,255,255,0.7);
+    color: var(--ink);
+    outline: none;
+    width: 200px;
+    letter-spacing: 3px;
+  }
+
+  .lock-input:focus {
+    border-color: var(--gold);
+    border-right: none;
+  }
+
+  .lock-btn {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    padding: 10px 20px;
+    background: var(--ink);
+    color: var(--gold);
+    border: 1px solid var(--ink);
+    border-radius: 0 2px 2px 0;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .lock-btn:hover { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+
+  .lock-error {
+    font-size: 11px;
+    color: var(--red);
+    letter-spacing: 1px;
+    height: 16px;
+  }
+
+  .lock-out-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    padding: 6px 14px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: rgba(26,26,46,0.45);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  .lock-out-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+
+  /* 등록 확인 페이지 */
+  .confirm-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 40px;
+    gap: 14px;
+    animation: fadeIn 0.4s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .confirm-check {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--green);
+    color: white;
+    font-size: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(39,174,96,0.3);
+    margin-bottom: 4px;
+  }
+
+  .confirm-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 8px;
+    color: var(--ink);
+  }
+
+  .confirm-subtitle {
+    font-size: 12px;
+    color: rgba(26,26,46,0.45);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  .confirm-card {
+    width: 100%;
+    max-width: 420px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.6);
+  }
+
+  .confirm-row, .confirm-sig-row {
+    display: flex;
+    align-items: center;
+    padding: 13px 20px;
+    border-bottom: 1px solid var(--line);
+    gap: 16px;
+  }
+
+  .confirm-sig-row {
+    border-bottom: none;
+    align-items: flex-start;
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .confirm-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: rgba(26,26,46,0.45);
+    min-width: 60px;
+  }
+
+  .confirm-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: 1px;
+  }
+
+  .confirm-sig-img {
+    max-width: 180px;
+    height: 50px;
+    object-fit: contain;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: white;
+  }
+
+  .confirm-no-sig {
+    font-size: 12px;
+    color: rgba(26,26,46,0.3);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .confirm-btn {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 14px;
+    letter-spacing: 4px;
+    padding: 13px 48px;
+    background: var(--ink);
+    color: var(--gold);
+    border: 1px solid var(--gold);
+    border-radius: 3px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.2s;
+  }
+
+  .confirm-btn:hover { background: var(--gold); color: var(--ink); }
+
+</style>
+</head>
+<body>
+
+<div class="book-wrapper">
+  <div class="book-cover">
+    <div class="book-spine"></div>
+    <div class="book-content">
+
+      <!-- 헤더 -->
+      <div class="registry-header">
+        <div class="header-ornament">◆ 전자 등록 시스템 ◆</div>
+        <div class="registry-title">등 록 부</div>
+        <div class="registry-subtitle">ATTENDANCE REGISTRY</div>
+        <div class="header-meta">
+          <div class="meta-item">
+            <div class="meta-field">
+              <span class="meta-label">날짜</span>
+              <span class="meta-value" id="headerDate">—</span>
+            </div>
+            <div class="meta-field">
+              <span class="meta-label">시간</span>
+              <span class="meta-value" id="headerTime">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 통계 -->
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div class="stat-num" id="statTotal">0</div>
+          <div class="stat-label">전체</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num green" id="statPresent">0</div>
+          <div class="stat-label">출석</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="statRate" style="font-size:18px;">—</div>
+          <div class="stat-label">출석률</div>
+        </div>
+      </div>
+
+      <!-- 등록 확인 페이지 -->
+      <div id="confirmPage" style="display:none;">
+        <div class="confirm-wrap">
+          <div class="confirm-check">✓</div>
+          <div class="confirm-title">등 록 완 료</div>
+          <div class="confirm-subtitle">아래 내용으로 등록되었습니다</div>
+          <div class="confirm-card">
+            <div class="confirm-row">
+              <span class="confirm-label">성 명</span>
+              <span class="confirm-value" id="confirmName">—</span>
+            </div>
+            <div class="confirm-row">
+              <span class="confirm-label">소 속</span>
+              <span class="confirm-value" id="confirmOrg">—</span>
+            </div>
+            <div class="confirm-row">
+              <span class="confirm-label">구 분</span>
+              <span class="confirm-value" id="confirmPosition">—</span>
+            </div>
+            <div class="confirm-row">
+              <span class="confirm-label">등록시각</span>
+              <span class="confirm-value" id="confirmTime">—</span>
+            </div>
+            <div class="confirm-sig-row">
+              <span class="confirm-label">서 명</span>
+              <img id="confirmSig" class="confirm-sig-img" src="" alt="서명" style="display:none;">
+              <span id="confirmNoSig" class="confirm-no-sig">서명 없음</span>
+            </div>
+          </div>
+          <button class="confirm-btn" onclick="closeConfirm()">확 인</button>
+        </div>
+      </div>
+
+      <!-- 등록 폼 -->
+      <div class="form-section" id="formSection">
+        <div class="form-section-title">참가자 등록</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>성 명</label>
+            <input type="text" id="inputName" placeholder="홍길동" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>구 분</label>
+            <select id="inputPosition" onchange="updateOrgPlaceholder(this.value)">
+              <option value="" disabled selected>구분을 선택하세요</option>
+              <option value="교사">교사</option>
+              <option value="학부모">학부모</option>
+              <option value="학생">학생</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>소 속</label>
+            <input type="text" id="inputOrg" placeholder="소속을 입력하세요" autocomplete="off">
+          <div class="form-group">
+            <label>연 락 처</label>
+            <input type="text" id="inputContact" placeholder="010-0000-0000" autocomplete="off">
+          </div>
+          <div class="form-group full">
+            <label>서 명</label>
+            <div class="signature-area">
+              <div class="signature-label-inside" id="sigPlaceholder">이곳에 서명하세요</div>
+              <canvas id="signatureCanvas"></canvas>
+            </div>
+            <div class="sig-actions">
+              <button class="btn-clear" onclick="clearSignature()">✕ 서명 지우기</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="attendance-buttons" style="grid-template-columns: 1fr;">
+          <button class="att-btn present" onclick="register('present')">
+            <span>✓ 등 록 하 기</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 등록부 목록 -->
+      <div class="registry-section">
+
+        <!-- 관리자 잠금 화면 -->
+        <div id="adminLock" class="admin-lock">
+          <div class="lock-icon">🔒</div>
+          <div class="lock-title">관 리 자 전 용</div>
+          <div class="lock-desc">등록현황은 관리자만 확인할 수 있습니다</div>
+          <div class="lock-input-wrap">
+            <input type="password" id="adminPw" class="lock-input" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')checkAdmin()">
+            <button class="lock-btn" onclick="checkAdmin()">확 인</button>
+          </div>
+          <div class="lock-error" id="lockError"></div>
+        </div>
+
+        <!-- 실제 등록현황 (잠금 해제 후 표시) -->
+        <div id="adminContent" style="display:none;">
+        <div class="section-header">
+          <div class="section-title">등 록 현 황</div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <input type="text" class="search-box" id="searchBox" placeholder="이름 / 소속 검색..." oninput="renderTable()">
+            <button class="lock-out-btn" onclick="lockAdmin()">잠 금</button>
+          </div>
+        </div>
+
+        <div class="filter-tabs">
+          <button class="filter-tab active" onclick="setFilter('all', this)">전체</button>
+          <button class="filter-tab" onclick="setFilter('present', this)">출석</button>
+        </div>
+
+        <table class="registry-table">
+          <thead>
+            <tr>
+              <th>NO</th>
+              <th>성명</th>
+              <th>소속</th>
+              <th>구분</th>
+              <th>상태</th>
+              <th>등록시각</th>
+              <th>서명</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="registryBody">
+            <tr><td colspan="8" class="empty-state">등록된 참가자가 없습니다</td></tr>
+          </tbody>
+        </table>
+        </div><!-- /adminContent -->
+      </div>
+
+      <!-- 푸터 -->
+      <div class="registry-footer">
+        <div class="footer-text">전자 등록 시스템 v1.0 · 데이터는 브라우저에 저장됩니다</div>
+        <button class="export-btn" onclick="exportCSV()">CSV 내보내기</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://sfzxlphbkrzwaixupriq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_wIp2Vt2Ytg8SHaH4OXtQPQ_PWuzDZ1e';
+
+let records = [];
+
+async function fetchRecords() {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/attendance?order=id.asc', {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY
+      }
+    });
+    records = await res.json();
+    renderTable();
+    updateStats();
+  } catch(e) {
+    console.error('불러오기 실패', e);
+  }
+}
+let currentFilter = 'all';
+let isDrawing = false;
+let hasSig = false;
+
+// 구분에 따라 소속 placeholder 변경
+function updateOrgPlaceholder(val) {
+  const org = document.getElementById('inputOrg');
+  const map = {
+    '교사': '학교 / 부서명',
+    '학부모': '자녀 학년 · 반 (선택)',
+    '학생': '학교 / 학년 · 반',
+  };
+  org.placeholder = map[val] || '소속을 입력하세요';
+}
+
+// 시계
+function updateClock() {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit' });
+  const timeStr = now.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  document.getElementById('headerDate').textContent = dateStr;
+  document.getElementById('headerTime').textContent = timeStr;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// 캔버스 서명
+const canvas = document.getElementById('signatureCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * window.devicePixelRatio;
+  canvas.height = 150 * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  ctx.strokeStyle = '#1a1a2e';
+  ctx.lineWidth = 1.8;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function getPos(e, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const src = e.touches ? e.touches[0] : e;
+  return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+}
+
+canvas.addEventListener('mousedown', e => { isDrawing = true; const p = getPos(e, canvas); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+canvas.addEventListener('mousemove', e => { if (!isDrawing) return; const p = getPos(e, canvas); ctx.lineTo(p.x, p.y); ctx.stroke(); hasSig = true; document.getElementById('sigPlaceholder').style.opacity = '0'; });
+canvas.addEventListener('mouseup', () => isDrawing = false);
+canvas.addEventListener('mouseleave', () => isDrawing = false);
+canvas.addEventListener('touchstart', e => { e.preventDefault(); isDrawing = true; const p = getPos(e, canvas); ctx.beginPath(); ctx.moveTo(p.x, p.y); }, { passive: false });
+canvas.addEventListener('touchmove', e => { e.preventDefault(); if (!isDrawing) return; const p = getPos(e, canvas); ctx.lineTo(p.x, p.y); ctx.stroke(); hasSig = true; document.getElementById('sigPlaceholder').style.opacity = '0'; }, { passive: false });
+canvas.addEventListener('touchend', () => isDrawing = false);
+
+function clearSignature() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  hasSig = false;
+  document.getElementById('sigPlaceholder').style.opacity = '1';
+}
+
+function getSignatureDataURL() {
+  if (!hasSig) return null;
+  return canvas.toDataURL('image/png');
+}
+
+// 등록
+async function register(status) {
+  const name = document.getElementById('inputName').value.trim();
+  const org = document.getElementById('inputOrg').value.trim();
+  const position = document.getElementById('inputPosition').value.trim();
+  const contact = document.getElementById('inputContact').value.trim();
+
+  if (!name) { showToast('성명을 입력해주세요'); return; }
+  if (!position) { showToast('구분을 선택해주세요'); return; }
+  if (!org && position !== '학부모') { showToast('소속을 입력해주세요'); return; }
+
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  const record = {
+    id: Date.now(),
+    name, org, position, contact, status,
+    time: timeStr,
+    signature: getSignatureDataURL()
+  };
+
+  // 저장
+  const saved = await save(record);
+  if (!saved) { showToast('저장에 실패했습니다. 다시 시도해주세요.'); return; }
+
+  records.push(saved);
+  renderTable();
+  updateStats();
+
+  // 초기화
+  document.getElementById('inputName').value = '';
+  document.getElementById('inputOrg').value = '';
+  document.getElementById('inputPosition').value = '';
+  document.getElementById('inputContact').value = '';
+  clearSignature();
+
+  // 확인 페이지 표시
+  showConfirm(saved);
+}
+
+function showConfirm(r) {
+  document.getElementById('confirmName').textContent = r.name;
+  document.getElementById('confirmOrg').textContent = r.org || '—';
+  document.getElementById('confirmPosition').textContent = r.position;
+  document.getElementById('confirmTime').textContent = r.time;
+
+  const sigImg = document.getElementById('confirmSig');
+  const noSig = document.getElementById('confirmNoSig');
+  if (r.signature) {
+    sigImg.src = r.signature;
+    sigImg.style.display = 'block';
+    noSig.style.display = 'none';
+  } else {
+    sigImg.style.display = 'none';
+    noSig.style.display = 'inline';
+  }
+
+  document.getElementById('confirmPage').style.display = 'block';
+  document.getElementById('formSection').style.display = 'none';
+  document.getElementById('confirmPage').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function closeConfirm() {
+  document.getElementById('confirmPage').style.display = 'none';
+  document.getElementById('formSection').style.display = 'block';
+}
+
+async function deleteRecord(id) {
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/attendance?id=eq.' + id, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY
+      }
+    });
+    records = records.filter(r => r.id !== id);
+    renderTable();
+    updateStats();
+  } catch(e) {
+    showToast('삭제 실패');
+  }
+}
+
+async function save(record) {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/attendance', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({
+        name: record.name,
+        org: record.org,
+        position: record.position,
+        contact: record.contact,
+        status: record.status,
+        time: record.time,
+        signature: record.signature
+      })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    return data[0];
+  } catch(e) {
+    console.error('저장 실패', e);
+    return null;
+  }
+}
+
+// 필터
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+
+// 테이블 렌더
+function renderTable() {
+  const search = document.getElementById('searchBox').value.toLowerCase();
+  let filtered = records.filter(r => {
+    const matchFilter = currentFilter === 'all' || r.status === currentFilter;
+    const matchSearch = r.name.toLowerCase().includes(search) || r.org.toLowerCase().includes(search);
+    return matchFilter && matchSearch;
+  });
+
+  const tbody = document.getElementById('registryBody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">표시할 기록이 없습니다</td></tr>';
+    return;
+  }
+
+  const statusMap = { present: ['present','출석'] };
+  tbody.innerHTML = filtered.map((r, i) => {
+    const [cls, label] = statusMap[r.status];
+    const sigHtml = r.signature
+      ? `<img class="sig-thumb" src="${r.signature}" alt="서명">`
+      : `<span class="no-sig">—</span>`;
+    return `<tr>
+      <td class="num-cell">${i + 1}</td>
+      <td style="font-weight:600">${r.name}</td>
+      <td>${r.org}</td>
+      <td style="color:rgba(26,26,46,0.6)">${r.position || '—'}</td>
+      <td><span class="status-badge ${cls}">${label}</span></td>
+      <td class="time-cell">${r.time}</td>
+      <td>${sigHtml}</td>
+      <td><button class="del-btn" onclick="deleteRecord(${r.id})">삭제</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// 통계
+function updateStats() {
+  const total = records.length;
+  const present = records.filter(r => r.status === 'present').length;
+  const rate = total > 0 ? Math.round(present / total * 100) : null;
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statPresent').textContent = present;
+  document.getElementById('statRate').textContent = rate !== null ? rate + '%' : '—';
+}
+
+// CSV 내보내기
+function exportCSV() {
+  if (records.length === 0) { showToast('내보낼 데이터가 없습니다'); return; }
+  const header = ['번호','성명','소속','직책','연락처','출결상태','등록시각'];
+  const statusLabel = { present:'출석' };
+  const rows = records.map((r, i) => [
+    i + 1, r.name, r.org, r.position || '', r.contact || '', statusLabel[r.status], r.time
+  ]);
+  const csv = [header, ...rows].map(row => row.join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `출결등록부_${new Date().toLocaleDateString('ko-KR').replace(/\./g,'').replace(/ /g,'')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV 파일이 저장되었습니다');
+}
+
+// 토스트
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+
+// 관리자 인증
+function checkAdmin() {
+  const pw = document.getElementById('adminPw').value;
+  if (pw === 'admin') {
+    document.getElementById('adminLock').style.display = 'none';
+    document.getElementById('adminContent').style.display = 'block';
+    document.getElementById('adminPw').value = '';
+    document.getElementById('lockError').textContent = '';
+    renderTable();
+  } else {
+    const err = document.getElementById('lockError');
+    err.textContent = '비밀번호가 올바르지 않습니다';
+    document.getElementById('adminPw').value = '';
+    setTimeout(() => err.textContent = '', 2500);
+  }
+}
+
+function lockAdmin() {
+  document.getElementById('adminContent').style.display = 'none';
+  document.getElementById('adminLock').style.display = 'flex';
+}
+
+// 초기 렌더
+fetchRecords();
+</script>
+</body>
+</html>
