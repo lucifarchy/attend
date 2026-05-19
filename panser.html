@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>판서</title>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=Nanum+Myeongjo:wght@400;700;800&family=Nanum+Pen+Script&family=Nanum+Brush+Script&family=Do+Hyeon&family=Jua&family=Black+Han+Sans&family=Gothic+A1:wght@400;700;900&family=Noto+Sans+KR:wght@400;700&family=Noto+Serif+KR:wght@400;700&family=Hi+Melody&family=Gaegu&family=Cute+Font&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Malgun Gothic', '맑은 고딕', 'Apple SD Gothic Neo', sans-serif;
+    background: #f4f6fa;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 툴바 */
+  .toolbar {
+    background: #fff;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    margin-bottom: 0;
+  }
+
+  .toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 8px;
+    border-right: 1px solid rgba(0,0,0,0.1);
+  }
+  .toolbar-group:last-child { border-right: none; }
+
+  .tb-btn {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    background: transparent;
+    font-size: 21px;
+    font-family: inherit;
+    transition: all 0.15s;
+    color: #1a1a2e;
+  }
+  .tb-btn:hover { background: #f0f2f7; border-color: rgba(0,0,0,0.1); }
+  .tb-btn.active { background: #e8eeff; border-color: #3366dd; color: #3366dd; }
+
+  .tb-label {
+    font-size: 16px;
+    color: #888aaa;
+    white-space: nowrap;
+  }
+
+  .font-size-input {
+    width: 68px; height: 44px;
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 6px;
+    text-align: center;
+    font-size: 18px;
+    font-family: inherit;
+    outline: none;
+    color: #1a1a2e;
+    padding: 0 4px;
+  }
+  .font-size-input:focus { border-color: #3366dd; }
+
+  .color-btn {
+    width: 40px; height: 40px;
+    border-radius: 6px;
+    border: 2px solid rgba(0,0,0,0.15);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s;
+  }
+  .color-btn:hover { transform: scale(1.1); }
+  .color-btn input[type="color"] {
+    position: absolute;
+    inset: -4px;
+    width: calc(100% + 8px);
+    height: calc(100% + 8px);
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .tb-select {
+    height: 44px;
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 6px;
+    font-size: 17px;
+    font-family: inherit;
+    padding: 0 6px;
+    outline: none;
+    color: #1a1a2e;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  .btn-print {
+    margin-left: auto;
+    padding: 10px 24px;
+    background: #1a1a2e;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    font-family: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+  }
+  .btn-print:hover { background: #3366dd; }
+
+  /* 편집 영역 */
+  .editor-wrap {
+    flex: 1;
+    display: flex;
+    padding: 0;
+    background: #fff;
+  }
+
+  .editor-page {
+    flex: 1;
+    width: 100%;
+    min-height: calc(100vh - 60px);
+    background: #fff;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 10mm;
+    outline: none;
+    font-family: 'Dotum', '돋움', 'Apple SD Gothic Neo', sans-serif;
+    font-size: 75px;
+    line-height: 1.5;
+    color: #000;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .editor-page:focus {
+    outline: none;
+    box-shadow: none;
+  }
+
+  .editor-page:empty::before {
+    content: '여기에 입력하세요...';
+    color: #ccc;
+    pointer-events: none;
+  }
+
+  /* 인쇄용 헤더 - 평소엔 숨김 */
+  #printHeader {
+    display: none;
+  }
+
+  /* 인쇄 전용 래퍼 - 평소엔 숨김 */
+  #printWrapper { display: none; }
+
+  @media print {
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    html, body {
+      width: 210mm;
+      height: 297mm;
+      margin: 0;
+      padding: 0;
+      background: #fff;
+    }
+    .toolbar { display: none !important; }
+    .editor-wrap { display: none !important; }
+
+    #printWrapper {
+      display: block !important;
+      width: 210mm;
+      height: 297mm;
+      margin: 0;
+      padding: 10mm;
+      box-sizing: border-box;
+      position: relative;
+      background: #fff;
+    }
+
+    /* 이중 테두리 - 테이블로 구현해서 잘림 방지 */
+    #printFrame {
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      border: 3.5px double #1a1a2e;
+      padding: 4mm;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 네 모서리 꽃 장식 */
+    #printFrame::before {
+      content: '✿ ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ✿';
+      display: block;
+      font-size: 7pt;
+      color: #1a1a2e;
+      text-align: center;
+      letter-spacing: 1px;
+      padding-bottom: 2mm;
+      border-bottom: 1px solid #1a1a2e;
+      margin-bottom: 0;
+    }
+
+    #printFrame::after {
+      content: '✿ ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ✿';
+      display: block;
+      font-size: 7pt;
+      color: #1a1a2e;
+      text-align: center;
+      letter-spacing: 1px;
+      padding-top: 2mm;
+      border-top: 1px solid #1a1a2e;
+      margin-top: auto;
+    }
+
+    /* 머릿말 */
+    #printHeader {
+      display: block !important;
+      padding: 4mm 8mm 3mm;
+      font-family: 'Dotum', '돋움', sans-serif;
+      font-size: 18pt;
+      font-weight: 700;
+      color: #1a1a2e;
+      text-align: center;
+      letter-spacing: 2px;
+      border-bottom: 2px solid #1a1a2e;
+      margin-bottom: 3mm;
+    }
+
+    /* 본문 */
+    #printContent {
+      flex: 1;
+      padding: 3mm 6mm;
+      line-height: 1.6;
+      color: #000;
+      word-break: break-word;
+      overflow: hidden;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .editor-wrap { padding: 0; }
+    .editor-page {
+      width: 100%;
+      min-height: calc(100vh - 80px);
+      font-size: 40px;
+      padding: 10mm;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- 툴바 -->
+<div class="toolbar">
+
+  <!-- 폰트 선택 -->
+  <div class="toolbar-group">
+    <span class="tb-label">폰트</span>
+    <select class="tb-select" id="fontSelect" onchange="applyFont(this.value)" style="width:140px;">
+      <option value="'Dotum','돋움',sans-serif">돋움</option>
+      <option value="'Malgun Gothic','맑은 고딕',sans-serif">맑은 고딕</option>
+      <option value="'Nanum Gothic',sans-serif">나눔고딕</option>
+      <option value="'Nanum Myeongjo',serif">나눔명조</option>
+      <option value="'Nanum Pen Script',cursive">나눔손글씨펜</option>
+      <option value="'Nanum Brush Script',cursive">나눔손글씨붓</option>
+      <option value="'Do Hyeon',sans-serif">도현</option>
+      <option value="'Jua',sans-serif">주아</option>
+      <option value="'Black Han Sans',sans-serif">검은고딕</option>
+      <option value="'Gothic A1',sans-serif">고딕A1</option>
+      <option value="'Noto Sans KR',sans-serif">Noto Sans</option>
+      <option value="'Noto Serif KR',serif">Noto Serif</option>
+      <option value="'Hi Melody',cursive">하이멜로디</option>
+      <option value="'Gaegu',cursive">개구</option>
+      <option value="'Cute Font',cursive">귀여운글씨</option>
+    </select>
+  </div>
+
+  <!-- 폰트 크기 -->
+  <div class="toolbar-group">
+    <span class="tb-label">크기</span>
+    <button class="tb-btn" onclick="changeFontSize(-5)" title="크기 줄이기">−</button>
+    <input class="font-size-input" id="fontSizeInput" type="number" value="75" min="8" max="300"
+      onchange="applyFontSize(this.value)" onkeydown="if(event.key==='Enter')applyFontSize(this.value)">
+    <button class="tb-btn" onclick="changeFontSize(5)" title="크기 키우기">＋</button>
+  </div>
+
+  <!-- 서식 -->
+  <div class="toolbar-group">
+    <button class="tb-btn" id="btn-bold" onclick="fmt('bold')" title="굵게" style="font-weight:900;">B</button>
+    <button class="tb-btn" id="btn-italic" onclick="fmt('italic')" title="기울기" style="font-style:italic;">I</button>
+    <button class="tb-btn" id="btn-underline" onclick="fmt('underline')" title="밑줄" style="text-decoration:underline;">U</button>
+    <button class="tb-btn" id="btn-strikeThrough" onclick="fmt('strikeThrough')" title="취소선" style="text-decoration:line-through;">S</button>
+  </div>
+
+  <!-- 글자색 -->
+  <div class="toolbar-group">
+    <span class="tb-label">글자색</span>
+    <div class="color-btn" id="textColorPreview" style="background:#000000;" title="글자색">
+      <input type="color" id="textColor" value="#000000" oninput="applyTextColor(this.value)">
+    </div>
+  </div>
+
+  <!-- 형광펜 -->
+  <div class="toolbar-group">
+    <span class="tb-label">형광펜</span>
+    <div class="color-btn" id="highlightPreview" style="background:#ffff00;" title="형광펜">
+      <input type="color" id="highlightColor" value="#ffff00" oninput="applyHighlight(this.value)">
+    </div>
+    <button class="tb-btn" id="btn-highlight" onclick="toggleHighlight()" title="형광펜 적용">🖊</button>
+  </div>
+
+  <!-- 배경색 -->
+  <div class="toolbar-group">
+    <span class="tb-label">배경색</span>
+    <div class="color-btn" id="bgColorPreview" style="background:#ffffff;" title="배경색">
+      <input type="color" id="bgColor" value="#ffffff" oninput="applyBgColor(this.value)">
+    </div>
+    <button class="tb-btn" onclick="resetBgColor()" title="배경색 초기화">↺</button>
+  </div>
+
+  <!-- 인쇄 -->
+  <button class="btn-print" onclick="printPage()">🖨 인쇄</button>
+</div>
+
+<!-- 인쇄 전용 레이아웃 (인쇄시에만 표시) -->
+<div id="printWrapper">
+  <div id="printFrame">
+    <div id="printHeader"></div>
+    <div id="printContent"></div>
+  </div>
+</div>
+
+<!-- 편집 영역 -->
+<div class="editor-wrap">
+  <div class="editor-page" id="editor" contenteditable="true" spellcheck="false"></div>
+</div>
+
+<script>
+const editor = document.getElementById('editor');
+
+// ── 포커스 유지 ────────────────────────────
+function focusEditor() {
+  editor.focus();
+}
+
+// ── 서식 명령 ─────────────────────────────
+function fmt(cmd) {
+  focusEditor();
+  document.execCommand(cmd, false, null);
+  updateToolbarState();
+}
+
+// ── 폰트 선택 ─────────────────────────────
+function applyFont(fontFamily) {
+  editor.style.fontFamily = fontFamily;
+  autoSave();
+}
+
+// ── 폰트 크기 ─────────────────────────────
+let currentFontSize = 75;
+
+function applyFontSize(val) {
+  currentFontSize = Math.max(8, Math.min(300, parseInt(val) || 75));
+  document.getElementById('fontSizeInput').value = currentFontSize;
+  editor.style.fontSize = currentFontSize + 'px';
+  focusEditor();
+}
+
+function changeFontSize(delta) {
+  applyFontSize(currentFontSize + delta);
+}
+
+// ── 글자색 ────────────────────────────────
+function applyTextColor(color) {
+  document.getElementById('textColorPreview').style.background = color;
+  focusEditor();
+  document.execCommand('foreColor', false, color);
+}
+
+// ── 형광펜 ────────────────────────────────
+let highlightOn = false;
+
+function applyHighlight(color) {
+  document.getElementById('highlightPreview').style.background = color;
+}
+
+function toggleHighlight() {
+  highlightOn = !highlightOn;
+  const btn = document.getElementById('btn-highlight');
+  btn.classList.toggle('active', highlightOn);
+  if (highlightOn) {
+    const color = document.getElementById('highlightColor').value;
+    focusEditor();
+    document.execCommand('hiliteColor', false, color);
+  } else {
+    focusEditor();
+    document.execCommand('hiliteColor', false, 'transparent');
+  }
+}
+
+// ── 배경색 ────────────────────────────────
+function applyBgColor(color) {
+  document.getElementById('bgColorPreview').style.background = color;
+  editor.style.background = color;
+}
+
+function resetBgColor() {
+  document.getElementById('bgColor').value = '#ffffff';
+  document.getElementById('bgColorPreview').style.background = '#ffffff';
+  editor.style.background = '#ffffff';
+}
+
+// ── 툴바 상태 업데이트 ────────────────────
+function updateToolbarState() {
+  ['bold','italic','underline','strikeThrough'].forEach(cmd => {
+    const btn = document.getElementById('btn-' + cmd);
+    if (btn) btn.classList.toggle('active', document.queryCommandState(cmd));
+  });
+}
+
+editor.addEventListener('keyup', updateToolbarState);
+editor.addEventListener('mouseup', updateToolbarState);
+editor.addEventListener('selectionchange', updateToolbarState);
+
+// ── 인쇄 ─────────────────────────────────
+function printPage() {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+
+  // 머릿말
+  document.getElementById('printHeader').textContent =
+    `${yyyy}년 ${mm}월 ${dd}일 봉서초 6학년 5반 알림장`;
+
+  // 본문 복사 - 글자 크기 1.5배
+  const pc = document.getElementById('printContent');
+  pc.innerHTML = editor.innerHTML;
+  pc.style.fontFamily = editor.style.fontFamily || '';
+  const baseFontSize = parseFloat(editor.style.fontSize) || currentFontSize || 75;
+  pc.style.fontSize = (baseFontSize * 1.5) + 'px';
+  pc.style.background = 'transparent';
+
+  window.print();
+}
+
+// ── 자동 저장 (브라우저 닫아도 복원) ─────
+function autoSave() {
+  localStorage.setItem('판서_content', editor.innerHTML);
+  localStorage.setItem('판서_fontSize', currentFontSize);
+  localStorage.setItem('판서_bgColor', editor.style.background || '#ffffff');
+  localStorage.setItem('판서_font', editor.style.fontFamily || '');
+}
+
+function autoLoad() {
+  const saved = localStorage.getItem('판서_content');
+  const savedSize = localStorage.getItem('판서_fontSize');
+  const savedBg = localStorage.getItem('판서_bgColor');
+  const savedFont = localStorage.getItem('판서_font');
+  if (saved) editor.innerHTML = saved;
+  if (savedSize) { currentFontSize = parseInt(savedSize); document.getElementById('fontSizeInput').value = currentFontSize; editor.style.fontSize = currentFontSize + 'px'; }
+  if (savedBg) { editor.style.background = savedBg; document.getElementById('bgColor').value = savedBg; document.getElementById('bgColorPreview').style.background = savedBg; }
+  if (savedFont) { editor.style.fontFamily = savedFont; const sel = document.getElementById('fontSelect'); for(let i=0;i<sel.options.length;i++){ if(sel.options[i].value===savedFont){sel.selectedIndex=i;break;} } }
+}
+
+editor.addEventListener('input', autoSave);
+autoLoad();
+
+// 초기 포커스
+setTimeout(() => editor.focus(), 100);
+</script>
+</body>
+</html>
