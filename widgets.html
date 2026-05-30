@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="./favicon.png">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>위젯 - lucifarchy.com</title>
+<link href="https://fonts.googleapis.com/css2?family=Malgun+Gothic&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f6fa; --surface: #ffffff; --surface2: #f0f2f7;
+    --border: rgba(0,0,0,0.07); --border2: rgba(0,0,0,0.12);
+    --text: #1a1a2e; --text-dim: #7a7a99; --accent: #3366dd;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { overflow-x: hidden; }
+  body {
+    font-family: 'Malgun Gothic', '맑은 고딕', 'Apple SD Gothic Neo', sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+  }
+
+  /* 상단바 */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px; background: var(--surface);
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+  }
+  .logo { font-size: 15px; font-weight: 900; cursor: pointer; }
+  .logo span { color: var(--accent); }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .search-wrap { position: relative; }
+  .search-input {
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 20px; padding: 6px 14px 6px 32px;
+    color: var(--text); font-size: 13px; outline: none; width: 180px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+    font-family: inherit; transition: all 0.2s;
+  }
+  .search-input:focus { border-color: var(--accent); width: 220px; }
+  .search-input::placeholder { color: var(--text-dim); }
+  .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text-dim); pointer-events: none; }
+  .search-results {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 10px; overflow: hidden; z-index: 200; display: none;
+  }
+  .search-results.open { display: block; }
+  .search-item {
+    padding: 10px 14px; font-size: 13px; cursor: pointer;
+    border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px;
+    transition: background 0.15s;
+  }
+  .search-item:last-child { border-bottom: none; }
+  .search-item:hover { background: rgba(85,136,255,0.1); }
+  .search-no { padding: 12px 14px; font-size: 12px; color: var(--text-dim); }
+  .clock { font-size: 12px; color: var(--text-dim); font-family: monospace; }
+  .btn-small {
+    font-size: 12px; padding: 5px 12px; background: transparent;
+    border: 1px solid var(--border2); color: var(--text-dim);
+    border-radius: 6px; cursor: pointer; font-family: inherit; transition: all 0.2s;
+  }
+  .btn-small:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* 모바일 탭 */
+  .mobile-tabs {
+    display: none; background: var(--surface);
+    border-bottom: 1px solid var(--border); overflow-x: auto;
+  }
+  .mobile-tabs-inner { display: flex; white-space: nowrap; }
+  .mtab {
+    padding: 10px 18px; font-size: 13px; font-weight: 700; color: var(--text-dim);
+    border: none; background: transparent; cursor: pointer; border-bottom: 2px solid transparent;
+    font-family: inherit; transition: all 0.2s;
+  }
+  .mtab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* 메인 그리드 */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 260px 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 12px;
+    padding: 16px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* 패널 공통 */
+  .panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  }
+  .panel-header {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-title {
+    font-size: 12px; font-weight: 700; color: var(--text-dim);
+    letter-spacing: 2px; text-transform: uppercase;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .panel-title::before { content:''; width:3px; height:12px; background:var(--accent); border-radius:2px; }
+  .panel-body { padding: 14px; }
+
+  /* 달력 */
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .cal-nav-btn {
+    background: none; border: 1px solid var(--border2); color: var(--text-dim);
+    border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 13px;
+    font-family: inherit; transition: all 0.2s;
+  }
+  .cal-nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .cal-month { font-size: 14px; font-weight: 700; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+  .cal-dow {
+    text-align: center; font-size: 10px; color: var(--text-dim);
+    padding: 4px 0; font-weight: 700;
+  }
+  .cal-dow:first-child { color: #ff6b6b; }
+  .cal-dow:last-child { color: #6b9fff; }
+  .cal-day {
+    text-align: center; padding: 6px 2px; font-size: 12px; border-radius: 6px;
+    cursor: pointer; transition: all 0.15s; position: relative;
+  }
+  .cal-day:hover { background: var(--surface2); }
+  .cal-day.today { background: var(--accent); color: #fff; font-weight: 700; }
+  .cal-day.selected { outline: 2px solid var(--accent); }
+  .cal-day.other-month { color: var(--text-dim); opacity: 0.4; }
+  .cal-day.sun { color: #ff6b6b; }
+  .cal-day.sat { color: #6b9fff; }
+  .cal-day.has-memo::after {
+    content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+    width: 4px; height: 4px; border-radius: 50%; background: #ffaa44;
+  }
+
+  /* 학생 명단 */
+  .student-add-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .student-input {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 6px; padding: 7px 10px; color: var(--text); font-size: 13px;
+    outline: none; font-family: inherit;
+  }
+  .student-input:focus { border-color: var(--accent); }
+  .student-input::placeholder { color: var(--text-dim); }
+  .btn-add-student {
+    padding: 7px 14px; background: var(--accent); color: #fff; border: none;
+    border-radius: 6px; font-size: 13px; cursor: pointer; font-family: inherit;
+    font-weight: 700; white-space: nowrap;
+  }
+  .student-list { display: flex; flex-direction: column; gap: 5px; max-height: 280px; overflow-y: auto; }
+  .student-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    background: var(--surface2); border-radius: 7px; border: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .student-item:hover { background: #1e1e2e; }
+  .student-num { font-size: 11px; color: var(--text-dim); min-width: 22px; }
+  .student-name { flex: 1; font-size: 13px; font-weight: 700; }
+  .att-btn-wrap { display: flex; gap: 4px; }
+  .att-dot {
+    width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border2);
+    font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; font-family: inherit; background: transparent; color: var(--text-dim);
+  }
+  .att-dot.present { background: #1db954; border-color: #1db954; color: #fff; }
+  .att-dot.absent  { background: #e05555; border-color: #e05555; color: #fff; }
+  .att-dot.late    { background: #f4a261; border-color: #f4a261; color: #fff; }
+  .student-del { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 14px; padding: 2px 4px; }
+  .student-del:hover { color: #e05555; }
+  .student-empty { font-size: 12px; color: var(--text-dim); text-align: center; padding: 20px; }
+
+  /* 시간표 */
+  .timetable { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .timetable th {
+    background: var(--surface2); padding: 7px 6px; text-align: center;
+    border: 1px solid var(--border2); font-size: 11px; color: var(--text-dim); font-weight: 700;
+  }
+  .timetable th:first-child { color: var(--text-dim); }
+  .timetable th.sun-h { color: #ff6b6b; }
+  .timetable th.sat-h { color: #6b9fff; }
+  .timetable td {
+    border: 1px solid var(--border); padding: 0; text-align: center;
+    height: 34px; position: relative;
+  }
+  .timetable td input {
+    width: 100%; height: 100%; background: transparent; border: none;
+    color: var(--text); font-size: 11px; text-align: center; outline: none;
+    padding: 2px 3px; font-family: inherit; cursor: pointer; background: transparent;
+  }
+  .timetable td input:focus { background: rgba(85,136,255,0.1); }
+  .timetable .period-cell {
+    background: var(--surface2); font-size: 11px; color: var(--text-dim);
+    font-weight: 700; width: 28px;
+  }
+  .timetable tr.today-col td { background: rgba(85,136,255,0.04); }
+
+  /* 메모장 */
+  .memo-date-select {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;
+  }
+  .memo-date-btn {
+    font-size: 11px; padding: 4px 10px; background: var(--surface2);
+    border: 1px solid var(--border2); border-radius: 5px; color: var(--text-dim);
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  .memo-date-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(85,136,255,0.08); }
+  .memo-textarea {
+    width: 100%; min-height: 200px; background: var(--surface2);
+    border: 1px solid var(--border2); border-radius: 8px;
+    color: var(--text); font-size: 13px; padding: 12px; resize: vertical;
+    outline: none; font-family: inherit; line-height: 1.7;
+    transition: border 0.2s;
+  }
+  .memo-textarea:focus { border-color: var(--accent); }
+  .memo-textarea::placeholder { color: var(--text-dim); }
+  .memo-status { font-size: 11px; color: var(--text-dim); margin-top: 6px; text-align: right; }
+
+  /* 그리드 배치 */
+  .col-left  { grid-column: 1; grid-row: 1 / 3; display: flex; flex-direction: column; gap: 12px; }
+  .col-mid   { grid-column: 2; }
+  .col-right { grid-column: 3; }
+  .row-bottom-mid   { grid-column: 2; }
+  .row-bottom-right { grid-column: 3; }
+
+  /* 반응형 */
+  @media (max-width: 900px) {
+    .main-grid { grid-template-columns: 1fr 1fr; }
+    .col-left { grid-column: 1 / 3; grid-row: auto; flex-direction: row; flex-wrap: wrap; }
+    .col-left .panel { flex: 1; min-width: 240px; }
+    .col-mid, .col-right, .row-bottom-mid, .row-bottom-right { grid-column: auto; }
+  }
+  @media (max-width: 600px) {
+    .mobile-tabs { display: block; }
+    .main-grid { grid-template-columns: 1fr; padding: 10px; gap: 10px; }
+    .col-left { flex-direction: column; }
+    .panel { display: none; }
+    .panel.mobile-active { display: block; }
+    .search-input { width: 140px; }
+    .search-input:focus { width: 160px; }
+  }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const ls = document.getElementById('lockScreen');
+  if (ls) {
+    if (sessionStorage.getItem('lf_auth') === '1') {
+      ls.style.display = 'none';
+    } else {
+      window.location.href = './index.html';
+    }
+  }
+});
+</script>
+
+</head>
+<body>
+
+<div id="lockScreen" style="position:fixed;inset:0;background:#f4f6fa;z-index:9999;display:flex;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:40px 32px;width:90%;max-width:340px;box-shadow:0 8px 40px rgba(0,0,0,0.12);text-align:center;">
+    <div style="font-size:36px;margin-bottom:12px;">🔒</div>
+    <div style="font-size:20px;font-weight:900;color:#1a1a2e;margin-bottom:24px;">비밀번호를 입력하세요</div>
+    <input type="password" id="lockInput" placeholder="비밀번호"
+      style="width:100%;padding:12px 16px;border:1.5px solid rgba(0,0,0,0.12);border-radius:8px;font-size:15px;outline:none;font-family:inherit;color:#1a1a2e;margin-bottom:12px;text-align:center;letter-spacing:4px;"
+      onkeydown="if(event.key==='Enter')checkLock()">
+    <div id="lockError" style="font-size:12px;color:#e05555;height:16px;margin-bottom:8px;"></div>
+    <button onclick="checkLock()" style="width:100%;padding:13px;background:#1a1a2e;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">입 장</button>
+  </div>
+</div>
+
+
+<!-- 상단바 -->
+<div class="topbar">
+  <div class="logo" onclick="location.href='./index.html'">lucifarchy<span>.com</span></div>
+  <div class="topbar-right">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="searchInput" placeholder="링크 검색..." oninput="doSearch(this.value)" onblur="setTimeout(()=>closeSearch(),200)">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+    <div class="clock" id="clock"></div>
+    <button class="btn-small" onclick="location.href='./index.html'">← 홈</button>
+  </div>
+</div>
+
+<!-- 모바일 탭 -->
+<div class="mobile-tabs">
+  <div class="mobile-tabs-inner">
+    <button class="mtab active" onclick="showMTab(0,this)">📅 달력</button>
+    <button class="mtab" onclick="showMTab(1,this)">👥 명단</button>
+    <button class="mtab" onclick="showMTab(2,this)">📋 시간표</button>
+    <button class="mtab" onclick="showMTab(3,this)">📝 메모</button>
+  </div>
+</div>
+
+<!-- 메인 그리드 -->
+<div class="main-grid">
+
+  <!-- 왼쪽 열: 달력 + 학생명단 -->
+  <div class="col-left">
+
+    <!-- 달력 -->
+    <div class="panel" id="panel-cal">
+      <div class="panel-header">
+        <div class="panel-title">달력</div>
+      </div>
+      <div class="panel-body">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="calMove(-1)">‹</button>
+          <div class="cal-month" id="calMonth"></div>
+          <button class="cal-nav-btn" onclick="calMove(1)">›</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+    </div>
+
+    <!-- 학생 명단 -->
+    <div class="panel" id="panel-students">
+      <div class="panel-header">
+        <div class="panel-title">학생 명단</div>
+        <div style="font-size:11px;color:var(--text-dim)" id="attSummary"></div>
+      </div>
+      <div class="panel-body">
+        <div class="student-add-row">
+          <input class="student-input" id="studentNameInput" placeholder="이름 입력" onkeydown="if(event.key==='Enter')addStudent()">
+          <button class="btn-add-student" onclick="addStudent()">추가</button>
+        </div>
+        <div class="student-list" id="studentList"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 시간표 -->
+  <div class="panel col-mid" id="panel-timetable">
+    <div class="panel-header">
+      <div class="panel-title">시간표</div>
+      <button class="btn-small" onclick="clearTimetable()">초기화</button>
+    </div>
+    <div class="panel-body" style="overflow-x:auto;">
+      <table class="timetable" id="timetableEl"></table>
+    </div>
+  </div>
+
+  <!-- 메모장 -->
+  <div class="panel col-right" id="panel-memo">
+    <div class="panel-header">
+      <div class="panel-title">메모</div>
+    </div>
+    <div class="panel-body">
+      <div class="memo-date-select" id="memoDateBtns"></div>
+      <textarea class="memo-textarea" id="memoText" placeholder="메모를 입력하세요. 자동으로 저장됩니다." oninput="saveMemo()"></textarea>
+      <div class="memo-status" id="memoStatus">자동저장</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── 데이터 ──────────────────────────────
+function ld(k, def) { try { return JSON.parse(localStorage.getItem(k)) || def; } catch(e) { return def; } }
+function sv(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+
+let students = ld('lf_students', []);
+let timetable = ld('lf_timetable', {});
+let memos = ld('lf_memos', {});
+let attendance = ld('lf_attendance', {});
+let lf_data = ld('lf_data', {personal:[],work:[]});
+
+// ── 시계 ─────────────────────────────────
+setInterval(()=>{ document.getElementById('clock').textContent = new Date().toLocaleTimeString('ko-KR'); },1000);
+document.getElementById('clock').textContent = new Date().toLocaleTimeString('ko-KR');
+
+// ── 검색 ─────────────────────────────────
+function getAllTiles() {
+  const tiles = [];
+  ['personal','work'].forEach(tab => {
+    (lf_data[tab]||[]).forEach(cat => {
+      cat.tiles.forEach(t => tiles.push({...t, tab, cat: cat.name}));
+    });
+  });
+  return tiles;
+}
+
+function doSearch(q) {
+  const box = document.getElementById('searchResults');
+  if (!q.trim()) { box.classList.remove('open'); return; }
+  const results = getAllTiles().filter(t => t.name.includes(q) || (t.url||'').includes(q));
+  if (!results.length) {
+    box.innerHTML = `<div class="search-no">검색 결과 없음</div>`;
+  } else {
+    box.innerHTML = results.slice(0,8).map(t =>
+      `<div class="search-item" onclick="window.open('${t.url}','_blank')">
+        <span>${t.icon||'🔗'}</span>
+        <span style="flex:1">${t.name}</span>
+        <span style="font-size:10px;color:var(--text-dim)">${t.cat}</span>
+      </div>`
+    ).join('');
+  }
+  box.classList.add('open');
+}
+
+function closeSearch() { document.getElementById('searchResults').classList.remove('open'); }
+
+// ── 달력 ─────────────────────────────────
+let calYear, calMonth, selDate;
+const today = new Date();
+calYear = today.getFullYear(); calMonth = today.getMonth();
+selDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+function calMove(d) { calMonth += d; if(calMonth>11){calMonth=0;calYear++;} if(calMonth<0){calMonth=11;calYear--;} renderCal(); }
+
+function renderCal() {
+  document.getElementById('calMonth').textContent = `${calYear}년 ${calMonth+1}월`;
+  const grid = document.getElementById('calGrid');
+  const dows = ['일','월','화','수','목','금','토'];
+  let html = dows.map((d,i) => `<div class="cal-dow${i===0?' style="color:#ff6b6b"':i===6?' style="color:#6b9fff"':''}">${d}</div>`).join('');
+  const first = new Date(calYear, calMonth, 1).getDay();
+  const last = new Date(calYear, calMonth+1, 0).getDate();
+  const prevLast = new Date(calYear, calMonth, 0).getDate();
+  let days = [];
+  for(let i=first-1;i>=0;i--) days.push({d:prevLast-i,cur:false});
+  for(let i=1;i<=last;i++) days.push({d:i,cur:true});
+  while(days.length%7!==0) { days.push({d:days.length-last-first+1,cur:false}); }
+  days.forEach((day,i) => {
+    const dow = i%7;
+    const dateStr = day.cur ? `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day.d).padStart(2,'0')}` : '';
+    const isToday = day.cur && calYear===today.getFullYear() && calMonth===today.getMonth() && day.d===today.getDate();
+    const isSel = dateStr === selDate;
+    const hasMemo = dateStr && memos[dateStr] && memos[dateStr].trim();
+    let cls = 'cal-day';
+    if (!day.cur) cls += ' other-month';
+    if (dow===0) cls += ' sun';
+    if (dow===6) cls += ' sat';
+    if (isToday) cls += ' today';
+    if (isSel && !isToday) cls += ' selected';
+    if (hasMemo) cls += ' has-memo';
+    html += `<div class="${cls}" onclick="selectDate('${dateStr}')">${day.d}</div>`;
+  });
+  grid.innerHTML = html;
+}
+
+function selectDate(dateStr) {
+  if (!dateStr) return;
+  selDate = dateStr;
+  renderCal();
+  loadMemo();
+  renderAttSummary();
+}
+
+// ── 학생 명단 ─────────────────────────────
+function renderStudents() {
+  const list = document.getElementById('studentList');
+  const att = attendance[selDate] || {};
+  if (!students.length) { list.innerHTML = `<div class="student-empty">명단이 없습니다</div>`; renderAttSummary(); return; }
+  list.innerHTML = students.map((s,i) => {
+    const a = att[s.id] || '';
+    return `<div class="student-item">
+      <div class="student-num">${i+1}</div>
+      <div class="student-name">${s.name}</div>
+      <div class="att-btn-wrap">
+        <button class="att-dot${a==='present'?' present':''}" title="출석" onclick="setAtt('${s.id}','present')">✓</button>
+        <button class="att-dot${a==='late'?' late':''}" title="지각" onclick="setAtt('${s.id}','late')">◷</button>
+        <button class="att-dot${a==='absent'?' absent':''}" title="결석" onclick="setAtt('${s.id}','absent')">✕</button>
+      </div>
+      <button class="student-del" onclick="delStudent('${s.id}')">×</button>
+    </div>`;
+  }).join('');
+  renderAttSummary();
+}
+
+function renderAttSummary() {
+  const att = attendance[selDate] || {};
+  const p = Object.values(att).filter(v=>v==='present').length;
+  const l = Object.values(att).filter(v=>v==='late').length;
+  const a = Object.values(att).filter(v=>v==='absent').length;
+  const total = students.length;
+  document.getElementById('attSummary').textContent = total ? `출석 ${p} 지각 ${l} 결석 ${a} / ${total}명` : '';
+}
+
+function addStudent() {
+  const inp = document.getElementById('studentNameInput');
+  const name = inp.value.trim();
+  if (!name) return;
+  students.push({id:'s'+Date.now(), name});
+  sv('lf_students', students);
+  inp.value = '';
+  renderStudents();
+}
+
+function delStudent(id) {
+  students = students.filter(s=>s.id!==id);
+  sv('lf_students', students);
+  renderStudents();
+}
+
+function setAtt(sid, type) {
+  if (!attendance[selDate]) attendance[selDate] = {};
+  attendance[selDate][sid] = attendance[selDate][sid] === type ? '' : type;
+  sv('lf_attendance', attendance);
+  renderStudents();
+}
+
+// ── 시간표 ────────────────────────────────
+const DAYS = ['','월','화','수','목','금','토','일'];
+const PERIODS = 8;
+
+function renderTimetable() {
+  const el = document.getElementById('timetableEl');
+  const todayDow = today.getDay(); // 0=일,1=월...
+  let html = '<tr><th></th>';
+  DAYS.slice(1).forEach((d,i) => {
+    const isTodayCol = (i+1) === todayDow;
+    const cls = i===4?'sat-h':i===5?'sun-h':'';
+    html += `<th class="${cls}"${isTodayCol?' style="color:var(--accent)"':''}>${d}</th>`;
+  });
+  html += '</tr>';
+  for(let p=1;p<=PERIODS;p++) {
+    html += `<tr><td class="period-cell">${p}</td>`;
+    for(let d=1;d<=7;d++) {
+      const key = `${d}-${p}`;
+      const val = timetable[key] || '';
+      html += `<td><input value="${val}" placeholder="" onchange="saveTT('${key}',this.value)" onclick="this.select()"></td>`;
+    }
+    html += '</tr>';
+  }
+  el.innerHTML = html;
+}
+
+function saveTT(key, val) {
+  timetable[key] = val;
+  sv('lf_timetable', timetable);
+}
+
+function clearTimetable() {
+  if (!confirm('시간표를 초기화할까요?')) return;
+  timetable = {};
+  sv('lf_timetable', timetable);
+  renderTimetable();
+}
+
+// ── 메모 ──────────────────────────────────
+let memoTimer = null;
+const MEMO_DATES = 7;
+
+function renderMemoDates() {
+  const wrap = document.getElementById('memoDateBtns');
+  const dates = [];
+  for(let i=0;i<MEMO_DATES;i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const str = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const label = i===0?'오늘':i===1?'어제':`${d.getMonth()+1}/${d.getDate()}`;
+    dates.push({str, label});
+  }
+  wrap.innerHTML = dates.map(d =>
+    `<button class="memo-date-btn${selDate===d.str?' active':''}" onclick="selectDate('${d.str}')">${d.label}</button>`
+  ).join('');
+}
+
+function loadMemo() {
+  document.getElementById('memoText').value = memos[selDate] || '';
+  document.getElementById('memoStatus').textContent = '자동저장';
+  renderMemoDates();
+}
+
+function saveMemo() {
+  memos[selDate] = document.getElementById('memoText').value;
+  sv('lf_memos', memos);
+  document.getElementById('memoStatus').textContent = '저장됨 ✓';
+  renderCal();
+  clearTimeout(memoTimer);
+  memoTimer = setTimeout(()=>{ document.getElementById('memoStatus').textContent = '자동저장'; }, 2000);
+}
+
+// ── 모바일 탭 ─────────────────────────────
+const PANELS = ['panel-cal','panel-students','panel-timetable','panel-memo'];
+function showMTab(idx, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('mobile-active'));
+  document.getElementById(PANELS[idx]).classList.add('mobile-active');
+  document.querySelectorAll('.mtab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+// 초기 모바일 활성
+if (window.innerWidth <= 600) document.getElementById('panel-cal').classList.add('mobile-active');
+
+// ── 초기화 ────────────────────────────────
+renderCal();
+renderStudents();
+renderTimetable();
+loadMemo();
+</script>
+</body>
+</html>
