@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>문서공작소 — 브라우저에서 끝내는 문서·이미지 작업</title>
+<meta name="description" content="설치도 회원가입도 없이 브라우저 안에서 PDF, 이미지, 업무 서식을 처리합니다. 파일은 기기 밖으로 나가지 않습니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EDF0EC;
+  --card:#FFFFFF;
+  --ink:#131A17;
+  --ink2:#4E5A55;
+  --ink3:#8A958F;
+  --line:#D3DAD5;
+  --sea:#17505C;
+  --sea-soft:#E4EDEF;
+  --stamp:#BE2A2F;
+  --r:3px;
+  --pad:clamp(16px,4vw,40px);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:"IBM Plex Sans KR",system-ui,sans-serif;
+  font-size:15px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:"Gowun Batang",serif;font-weight:700;letter-spacing:-.01em;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--sea)}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+
+/* ---------- 머리글 ---------- */
+.top{border-bottom:1px solid var(--line);background:var(--card)}
+.top-in{max-width:1180px;margin:0 auto;padding:18px var(--pad);display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.mark{flex:1 1 240px;min-width:0}
+.mark h1{font-size:clamp(24px,3.4vw,34px);line-height:1.1}
+.mark h1 button{background:none;border:0;padding:0;font:inherit;cursor:pointer;color:inherit}
+.mark p{margin:6px 0 0;color:var(--ink2);font-size:13.5px}
+
+/* 결재란 — 이 사이트의 서명 요소 */
+.approval{display:flex;border:1px solid var(--ink);border-radius:2px;overflow:hidden;background:var(--card)}
+.approval div{padding:6px 14px 8px;border-right:1px solid var(--line);text-align:center;min-width:76px}
+.approval div:last-child{border-right:0}
+.approval dt{font-size:10px;letter-spacing:.18em;color:var(--ink3);margin:0 0 3px}
+.approval dd{margin:0;font-size:12.5px;font-weight:600;font-family:"IBM Plex Mono",monospace}
+
+/* ---------- 검색·분류 ---------- */
+.bar{max-width:1180px;margin:0 auto;padding:20px var(--pad) 0;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.search{flex:1 1 260px;display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:9px 12px}
+.search input{flex:1;border:0;outline:0;background:none;min-width:0}
+.search kbd{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink3);border:1px solid var(--line);border-radius:2px;padding:1px 5px}
+.cats{display:flex;gap:6px;flex-wrap:wrap}
+.cats button{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:8px 13px;font-size:13px;cursor:pointer;transition:.14s}
+.cats button:hover{border-color:var(--sea)}
+.cats button[aria-pressed=true]{background:var(--sea);border-color:var(--sea);color:#fff}
+.cats span{font-family:"IBM Plex Mono",monospace;font-size:11px;opacity:.6;margin-left:5px}
+
+/* ---------- 도구 격자 ---------- */
+main{max-width:1180px;margin:0 auto;padding:22px var(--pad) 72px}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(224px,1fr))}
+.tile{position:relative;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:15px 16px 16px;cursor:pointer;transition:.14s;display:flex;flex-direction:column;gap:5px}
+.tile:hover{border-color:var(--sea);transform:translateY(-2px);box-shadow:0 6px 18px -12px rgba(19,26,23,.5)}
+.tile b{font-size:15px;font-weight:600}
+.tile small{color:var(--ink2);font-size:12.5px;line-height:1.5}
+.tile i{font-style:normal;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)}
+.empty{color:var(--ink2);padding:40px 0;text-align:center}
+
+/* ---------- 작업 화면 ---------- */
+.work{display:none}
+.work.on{display:block}
+.grid-wrap.off{display:none}
+.back{background:none;border:0;color:var(--sea);cursor:pointer;padding:0;font-size:13px;margin-bottom:14px}
+.work h2{font-size:clamp(21px,3vw,27px)}
+.work .lede{color:var(--ink2);margin:6px 0 22px;max-width:62ch}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:clamp(16px,3vw,26px)}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin:0 0 14px}
+.field{flex:1 1 170px;min-width:0}
+.field label{display:block;font-size:12px;color:var(--ink2);margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:var(--r);background:#fff;outline:0}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--sea);box-shadow:0 0 0 3px var(--sea-soft)}
+input[type=range]{padding:0;accent-color:var(--sea)}
+.hint{font-size:12px;color:var(--ink3);margin:-8px 0 14px}
+
+.drop{border:1.5px dashed var(--line);border-radius:var(--r);background:#FAFBFA;padding:30px 20px;text-align:center;cursor:pointer;transition:.14s}
+.drop:hover,.drop.over{border-color:var(--sea);background:var(--sea-soft)}
+.drop strong{display:block;font-weight:600;margin-bottom:4px}
+.drop span{font-size:12.5px;color:var(--ink2)}
+.files{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.files li{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:var(--r);padding:8px 11px;font-size:13px;background:#fff}
+.files li span:first-child{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.files li .sz{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink3)}
+.files li button{border:0;background:none;color:var(--ink3);cursor:pointer;font-size:16px;line-height:1;padding:0 2px}
+.files li button:hover{color:var(--stamp)}
+
+.go{background:var(--sea);color:#fff;border:0;border-radius:var(--r);padding:11px 22px;font-weight:600;cursor:pointer;transition:.14s}
+.go:hover{background:#0F3C46}
+.go:disabled{background:var(--ink3);cursor:not-allowed}
+.ghost{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:10px 16px;cursor:pointer}
+.ghost:hover{border-color:var(--sea)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;align-items:center}
+
+.out{margin-top:22px;position:relative}
+.out:empty{display:none}
+.result{border:1px solid var(--line);border-radius:var(--r);background:#FAFBFA;padding:16px}
+.result h3{font-family:"IBM Plex Sans KR";font-size:13px;font-weight:600;margin:0 0 10px;letter-spacing:.02em}
+.dl{display:inline-flex;align-items:center;gap:7px;background:var(--ink);color:#fff;border:0;border-radius:var(--r);padding:9px 16px;text-decoration:none;font-size:13.5px;cursor:pointer}
+.dl:hover{background:#000}
+.thumbs{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));margin-top:12px}
+.thumbs figure{margin:0;background:#fff;border:1px solid var(--line);border-radius:2px;padding:6px;text-align:center}
+.thumbs img{width:100%;height:88px;object-fit:contain;display:block;background:
+  repeating-conic-gradient(#EFEFEF 0 25%,#fff 0 50%) 50%/12px 12px}
+.thumbs figcaption{font-size:10.5px;color:var(--ink3);margin-top:5px;font-family:"IBM Plex Mono",monospace}
+.big{font-family:"IBM Plex Mono",monospace;font-size:clamp(20px,3.6vw,28px);font-weight:500}
+table.calc{width:100%;border-collapse:collapse;margin-top:6px}
+table.calc td{padding:9px 4px;border-bottom:1px solid var(--line);font-size:14px}
+table.calc td:last-child{text-align:right;font-family:"IBM Plex Mono",monospace}
+table.calc tr:last-child td{border-bottom:0;font-weight:700;font-size:16px;color:var(--sea)}
+pre.txt{white-space:pre-wrap;word-break:break-all;max-height:340px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:2px;padding:12px;font-size:12.5px;margin:0}
+.err{color:var(--stamp);font-size:13.5px;margin-top:12px}
+.busy{font-size:13px;color:var(--ink2);margin-top:12px}
+
+/* 완료 도장 */
+.stamp{position:absolute;top:-14px;right:6px;width:76px;height:76px;border:3px solid var(--stamp);border-radius:50%;color:var(--stamp);
+  display:grid;place-content:center;font-family:"Gowun Batang",serif;font-weight:700;font-size:19px;letter-spacing:.1em;
+  transform:rotate(-13deg);opacity:.92;pointer-events:none;background:rgba(255,255,255,.4);
+  animation:press .45s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes press{from{transform:rotate(-13deg) scale(2.4);opacity:0}to{transform:rotate(-13deg) scale(1);opacity:.92}}
+@media (prefers-reduced-motion:reduce){.stamp{animation:none}.tile:hover{transform:none}}
+
+footer{border-top:1px solid var(--line);background:var(--card)}
+.foot{max-width:1180px;margin:0 auto;padding:24px var(--pad);font-size:12.5px;color:var(--ink2);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
+@media(max-width:560px){.approval{width:100%}.approval div{flex:1;min-width:0}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="mark">
+      <h1><button id="home">문서공작소</button></h1>
+      <p>제출 직전에 막히는 파일 작업을, 브라우저 안에서 끝냅니다.</p>
+    </div>
+    <dl class="approval" aria-label="처리 방식">
+      <div><dt>처리</dt><dd>내 기기</dd></div>
+      <div><dt>업로드</dt><dd>없음</dd></div>
+      <div><dt>가입</dt><dd>불필요</dd></div>
+    </dl>
+  </div>
+</header>
+
+<div class="bar">
+  <div class="search">
+    <span aria-hidden="true">⌕</span>
+    <input id="q" type="search" placeholder="도구 이름이나 상황으로 찾기 — 예: 용량, HEIC, 도장" aria-label="도구 검색">
+    <kbd>/</kbd>
+  </div>
+  <div class="cats" id="cats"></div>
+</div>
+
+<main>
+  <div class="grid-wrap" id="gridWrap"><div class="grid" id="grid"></div></div>
+  <section class="work" id="work" tabindex="-1"></section>
+</main>
+
+<footer><div class="foot">
+  <span>파일과 입력값은 이 브라우저 안에서만 처리됩니다. 서버로 전송되지 않습니다.</span>
+  <a href="#diagnose" class="mono">자가진단 실행 →</a>
+</div></footer>
+
+<script>
+"use strict";
+/* ---- 외부 모듈 적재: CDN 두 곳을 차례로 시도 ---- */
+const LIBS=[
+  {key:"pdf-lib", label:"PDF 편집", global:"PDFLib", urls:[
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js",
+    "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"]},
+  {key:"pdfjs", label:"PDF 읽기", global:"pdfjsLib", urls:[
+    "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"],
+    after(){ pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js"; }},
+  {key:"jszip", label:"ZIP 묶기", global:"JSZip", urls:[
+    "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js",
+    "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"]},
+  {key:"heic", label:"HEIC 변환", global:"heic2any", urls:[
+    "https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.1/index.min.js"]}
+];
+const LIBSTATE={};
+const loadScript=url=>new Promise((res,rej)=>{
+  const t=document.createElement("script"); t.src=url;
+  t.onload=res; t.onerror=()=>rej(new Error(url)); document.head.appendChild(t);
+});
+const libsReady=(async()=>{
+  await Promise.all(LIBS.map(async lib=>{
+    for(const url of lib.urls){
+      try{
+        await loadScript(url);
+        if(window[lib.global]){ lib.after&&lib.after(); LIBSTATE[lib.key]={ok:true,url}; return; }
+      }catch(e){}
+    }
+    LIBSTATE[lib.key]={ok:false};
+  }));
+  document.dispatchEvent(new Event("libs"));
+})();
+function needLib(key,out){
+  if(LIBSTATE[key]&&LIBSTATE[key].ok) return true;
+  fail(out,`‘${LIBS.find(l=>l.key===key).label}’ 모듈을 불러오지 못했습니다. 인터넷 연결이나 차단 프로그램을 확인한 뒤 새로고침해 주세요.`);
+  return false;
+}
+
+/* ===================== 공용 도우미 ===================== */
+const $ = (s,r=document)=>r.querySelector(s);
+const el = (html)=>{const t=document.createElement("template");t.innerHTML=html.trim();return t.content.firstElementChild;};
+const num = n => (Math.round(n)).toLocaleString("ko-KR");
+const kb = b => b<1024 ? b+" B" : b<1048576 ? (b/1024).toFixed(1)+" KB" : (b/1048576).toFixed(2)+" MB";
+const stem = n => n.replace(/\.[^.]+$/,"");
+const sleep = ()=>new Promise(r=>setTimeout(r,0));
+
+function download(blob,name){
+  const u=URL.createObjectURL(blob), a=document.createElement("a");
+  a.href=u; a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(u),4000);
+}
+
+/** 결과 카드 + 완료 도장 */
+function result(out, title, bodyHTML){
+  out.innerHTML = `<div class="result"><h3>${title}</h3>${bodyHTML}</div><div class="stamp">완료</div>`;
+  return out.querySelector(".result");
+}
+function fail(out,msg){ out.innerHTML = `<p class="err">${msg}</p>`; }
+function busy(out,msg){ out.innerHTML = `<p class="busy">${msg}</p>`; }
+
+/** 파일 선택 영역. onChange(files) 로 현재 목록을 넘겨준다. */
+function picker(opts){
+  const {accept="", multiple=false, title="파일을 끌어다 놓거나 눌러서 선택",
+         sub="", list=true, onChange=()=>{}} = opts;
+  const wrap = el(`<div>
+    <div class="drop" tabindex="0" role="button"><strong>${title}</strong><span>${sub}</span></div>
+    <input type="file" hidden ${multiple?"multiple":""} ${accept?`accept="${accept}"`:""}>
+    ${list?'<ul class="files"></ul>':""}
+  </div>`);
+  const drop=$(".drop",wrap), input=$("input",wrap), ul=$(".files",wrap);
+  let files=[];
+
+  const render=()=>{
+    if(!ul) return;
+    ul.innerHTML="";
+    files.forEach((f,i)=>{
+      const li=el(`<li><span>${f.name}</span><span class="sz">${kb(f.size)}</span><button title="빼기">×</button></li>`);
+      li.querySelector("button").onclick=()=>{files.splice(i,1);render();onChange(files);};
+      ul.appendChild(li);
+    });
+  };
+  const add=(fl)=>{
+    const arr=[...fl]; files = multiple ? files.concat(arr) : arr.slice(0,1);
+    render(); onChange(files);
+  };
+  drop.onclick=()=>input.click();
+  drop.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();input.click();}};
+  input.onchange=()=>{add(input.files); input.value="";};
+  ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
+  ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
+  drop.addEventListener("drop",e=>add(e.dataTransfer.files));
+
+  return {el:wrap, get files(){return files;}, clear(){files=[];render();onChange(files);}};
+}
+
+/* 이미지·캔버스 */
+const loadImage = file => new Promise((res,rej)=>{
+  const u=URL.createObjectURL(file), i=new Image();
+  i.onload=()=>{URL.revokeObjectURL(u);res(i);};
+  i.onerror=()=>{URL.revokeObjectURL(u);rej(new Error("이미지를 열 수 없습니다."));};
+  i.src=u;
+});
+const toBlob=(cv,type="image/jpeg",q=.92)=>new Promise(r=>cv.toBlob(r,type,q));
+function canvasOf(w,h){const c=document.createElement("canvas");c.width=Math.max(1,Math.round(w));c.height=Math.max(1,Math.round(h));return c;}
+function flatten(ctx,w,h,color="#ffffff"){ctx.save();ctx.globalCompositeOperation="destination-over";ctx.fillStyle=color;ctx.fillRect(0,0,w,h);ctx.restore();}
+
+/* PDF */
+async function readPdf(file){
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  return PDFLib.PDFDocument.load(bytes,{ignoreEncryption:true});
+}
+function parseRanges(str,max){
+  const out=new Set();
+  str.split(",").map(s=>s.trim()).filter(Boolean).forEach(part=>{
+    const m=part.match(/^(\d+)\s*[-~]\s*(\d+)$/);
+    if(m){const a=+m[1],b=+m[2];for(let i=Math.min(a,b);i<=Math.max(a,b);i++) if(i>=1&&i<=max) out.add(i);}
+    else if(/^\d+$/.test(part)){const n=+part; if(n>=1&&n<=max) out.add(n);}
+  });
+  return [...out].sort((a,b)=>a-b);
+}
+async function pdfPages(file){ // pdf.js 문서 핸들
+  return pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+}
+async function renderPage(page,scale){
+  const vp=page.getViewport({scale});
+  const cv=canvasOf(vp.width,vp.height);
+  await page.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
+  return cv;
+}
+
+/* ===================== 도구 정의 ===================== */
+const TOOLS=[];
+const T=(id,cat,name,tagline,build)=>TOOLS.push({id,cat,name,tagline,build});
+const CATS={doc:"업무 문서",pdf:"PDF",img:"이미지"};
+
+/* ---------- 업무 문서 ---------- */
+
+T("vat","doc","부가세 계산기","공급가액과 합계 금액을 서로 바꿔 계산합니다.",box=>{
+  box.append(el(`<div class="panel">
+    <div class="row">
+      <div class="field"><label>금액</label><input id="v-amt" inputmode="numeric" placeholder="1,000,000"></div>
+      <div class="field"><label>입력한 금액의 기준</label><select id="v-mode">
+        <option value="supply">공급가액 (부가세 별도)</option>
+        <option value="total">합계 금액 (부가세 포함)</option></select></div>
+      <div class="field"><label>세율</label><select id="v-rate"><option value="10">10%</option><option value="0">0% (영세율)</option></select></div>
+    </div>
+    <table class="calc"><tbody id="v-out"></tbody></table>
+    <p class="hint" style="margin-top:14px">면세 대상이거나 세율이 다른 거래에는 적용되지 않습니다.</p>
+  </div>`));
+  const amt=$("#v-amt",box), mode=$("#v-mode",box), rate=$("#v-rate",box), out=$("#v-out",box);
+  const calc=()=>{
+    const raw=+String(amt.value).replace(/[^\d.]/g,"")||0, r=+rate.value/100;
+    let supply,tax;
+    if(mode.value==="supply"){supply=raw;tax=Math.round(raw*r);}
+    else {supply=Math.round(raw/(1+r));tax=raw-supply;}
+    out.innerHTML=`<tr><td>공급가액</td><td>${num(supply)} 원</td></tr>
+      <tr><td>부가세</td><td>${num(tax)} 원</td></tr>
+      <tr><td>합계</td><td>${num(supply+tax)} 원</td></tr>`;
+  };
+  amt.oninput=()=>{const c=String(amt.value).replace(/[^\d]/g,"");amt.value=c?(+c).toLocaleString("ko-KR"):"";calc();};
+  mode.onchange=rate.onchange=calc; calc();
+});
+
+T("wht","doc","3.3% 원천징수 계산기","사업소득 지급액에서 뗄 세금과 실지급액을 계산합니다.",box=>{
+  box.append(el(`<div class="panel">
+    <div class="row">
+      <div class="field"><label>금액</label><input id="w-amt" inputmode="numeric" placeholder="1,000,000"></div>
+      <div class="field"><label>입력한 금액의 기준</label><select id="w-mode">
+        <option value="gross">지급 총액 (세전)</option>
+        <option value="net">실지급액 (세후)</option></select></div>
+    </div>
+    <table class="calc"><tbody id="w-out"></tbody></table>
+    <p class="hint" style="margin-top:14px">소득세 3% + 지방소득세 0.3% 기준이며, 세액은 10원 미만을 버립니다. 실제 신고 금액은 지급 조건에 따라 달라질 수 있습니다.</p>
+  </div>`));
+  const amt=$("#w-amt",box), mode=$("#w-mode",box), out=$("#w-out",box);
+  const floor10=n=>Math.floor(n/10)*10;
+  const calc=()=>{
+    const raw=+String(amt.value).replace(/[^\d]/g,"")||0;
+    const gross = mode.value==="gross" ? raw : Math.round(raw/0.967);
+    const inc=floor10(gross*0.03), loc=floor10(inc*0.1);
+    out.innerHTML=`<tr><td>지급 총액</td><td>${num(gross)} 원</td></tr>
+      <tr><td>소득세 3%</td><td>− ${num(inc)} 원</td></tr>
+      <tr><td>지방소득세 0.3%</td><td>− ${num(loc)} 원</td></tr>
+      <tr><td>실지급액</td><td>${num(gross-inc-loc)} 원</td></tr>`;
+  };
+  amt.oninput=()=>{const c=String(amt.value).replace(/[^\d]/g,"");amt.value=c?(+c).toLocaleString("ko-KR"):"";calc();};
+  mode.onchange=calc; calc();
+});
+
+function koreanAmount(n,formal){
+  if(n===0) return "영";
+  const D=["","일","이","삼","사","오","육","칠","팔","구"], S=["","십","백","천"], B=["","만","억","조","경"];
+  let out="", g=0, x=Math.floor(Math.abs(n));
+  while(x>0){
+    const part=x%10000; x=Math.floor(x/10000);
+    if(part){
+      let t="", p=part, i=0;
+      while(p>0){
+        const d=p%10;
+        if(d) t=((d===1&&i>0&&!formal)?"":D[d])+S[i]+t;
+        p=Math.floor(p/10); i++;
+      }
+      out=t+B[g]+out;
+    }
+    g++;
+  }
+  return out;
+}
+
+T("hangul","doc","금액 한글 변환기","숫자 금액을 증빙 서류용 한글 표기로 바꿉니다.",box=>{
+  box.append(el(`<div class="panel">
+    <div class="field"><label>금액 (원)</label><input id="k-amt" inputmode="numeric" placeholder="1,234,567"></div>
+    <table class="calc"><tbody id="k-out"></tbody></table>
+    <p class="hint" style="margin-top:14px">증빙용 표기는 위·변조를 막기 위해 ‘일’을 생략하지 않습니다.</p>
+  </div>`));
+  const amt=$("#k-amt",box), out=$("#k-out",box);
+  const calc=()=>{
+    const v=+String(amt.value).replace(/[^\d]/g,"")||0;
+    out.innerHTML=`<tr><td>숫자</td><td>${num(v)} 원</td></tr>
+      <tr><td>일반 표기</td><td>${koreanAmount(v,false)}원</td></tr>
+      <tr><td>증빙용 표기</td><td>일금 ${koreanAmount(v,true)}원정</td></tr>`;
+  };
+  amt.oninput=()=>{const c=String(amt.value).replace(/[^\d]/g,"");amt.value=c?(+c).toLocaleString("ko-KR"):"";calc();};
+  calc();
+});
+
+T("nameplate","doc","사업자 명판 만들기","상호·사업자번호·연락처를 넣은 명판을 PNG로 저장합니다.",box=>{
+  const F=[["상호","한빛공작소"],["대표자","홍길동"],["사업자등록번호","123-45-67890"],
+           ["주소","전북특별자치도 전주시 완산구 …"],["연락처","063-000-0000"],["이메일",""]];
+  box.append(el(`<div class="panel">
+    <div class="row" id="np-fields"></div>
+    <div class="row">
+      <div class="field"><label>가로 크기 (px)</label><input id="np-w" type="number" value="900" min="300" max="2400"></div>
+      <div class="field"><label>글자 크기</label><input id="np-fs" type="number" value="26" min="12" max="60"></div>
+      <div class="field"><label>테두리</label><select id="np-b"><option value="1">사용</option><option value="0">없음</option></select></div>
+      <div class="field"><label>배경</label><select id="np-bg"><option value="#ffffff">흰색</option><option value="transparent">투명</option></select></div>
+    </div>
+    <div class="actions"><button class="go" id="np-go">명판 만들기</button></div>
+    <div class="out" id="np-out"></div>
+  </div>`));
+  const wrap=$("#np-fields",box);
+  F.forEach(([label,ph],i)=>wrap.append(el(`<div class="field"><label>${label}</label><input data-l="${label}" value="${i<5?ph:""}"></div>`)));
+  const out=$("#np-out",box);
+  $("#np-go",box).onclick=async()=>{
+    const rows=[...wrap.querySelectorAll("input")].map(i=>[i.dataset.l,i.value.trim()]).filter(r=>r[1]);
+    if(!rows.length) return fail(out,"내용을 한 줄 이상 입력하세요.");
+    const W=+$("#np-w",box).value, fs=+$("#np-fs",box).value, pad=Math.round(fs*1.6);
+    const lh=Math.round(fs*1.75), H=pad*2+lh*rows.length;
+    const cv=canvasOf(W,H), c=cv.getContext("2d");
+    const bg=$("#np-bg",box).value;
+    if(bg!=="transparent"){c.fillStyle=bg;c.fillRect(0,0,W,H);}
+    if($("#np-b",box).value==="1"){c.strokeStyle="#131A17";c.lineWidth=Math.max(2,fs/12);c.strokeRect(c.lineWidth/2,c.lineWidth/2,W-c.lineWidth,H-c.lineWidth);}
+    c.textBaseline="middle"; c.fillStyle="#131A17";
+    const labelW=Math.round(W*0.26);
+    rows.forEach(([l,v],i)=>{
+      const y=pad+lh*i+lh/2;
+      c.font=`500 ${Math.round(fs*0.82)}px "IBM Plex Sans KR", sans-serif`;
+      c.fillStyle="#4E5A55"; c.fillText(l,pad,y);
+      c.font=`600 ${fs}px "IBM Plex Sans KR", sans-serif`;
+      c.fillStyle="#131A17"; c.fillText(v,pad+labelW,y);
+    });
+    const blob=await toBlob(cv,"image/png");
+    const r=result(out,"명판이 만들어졌습니다",`<img src="${URL.createObjectURL(blob)}" style="max-width:100%;border:1px solid var(--line);background:#fff">
+      <div class="actions"><button class="dl">PNG 내려받기 · ${kb(blob.size)}</button></div>`);
+    r.querySelector(".dl").onclick=()=>download(blob,"명판.png");
+  };
+});
+
+T("estimate","doc","견적서·거래명세서 만들기","항목을 입력해 A4 서식으로 인쇄하거나 PDF로 저장합니다.",box=>{
+  box.append(el(`<div class="panel">
+    <div class="row">
+      <div class="field"><label>문서 종류</label><select id="e-kind">
+        <option>견적서</option><option>거래명세서</option><option>청구서</option><option>영수증</option></select></div>
+      <div class="field"><label>작성일</label><input id="e-date" type="date"></div>
+      <div class="field"><label>공급받는 자</label><input id="e-to" placeholder="○○초등학교"></div>
+      <div class="field"><label>공급자 상호</label><input id="e-from" placeholder="한빛공작소"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>사업자등록번호</label><input id="e-biz" placeholder="123-45-67890"></div>
+      <div class="field"><label>연락처</label><input id="e-tel"></div>
+      <div class="field"><label>부가세</label><select id="e-vat"><option value="10">10% 별도</option><option value="0">없음</option></select></div>
+    </div>
+    <label style="font-size:12px;color:var(--ink2)">품목 — 한 줄에 <span class="mono">품명, 수량, 단가</span></label>
+    <textarea id="e-items" rows="6" style="width:100%;margin-top:5px;padding:10px;border:1px solid var(--line);border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:13px">3D 프린터 필라멘트 PLA 1kg, 4, 22000
+아크릴 판 300x300, 10, 3500</textarea>
+    <div class="actions"><button class="go" id="e-go">서식 만들기</button></div>
+    <div class="out" id="e-out"></div>
+  </div>`));
+  $("#e-date",box).valueAsDate=new Date();
+  const out=$("#e-out",box);
+  $("#e-go",box).onclick=()=>{
+    const items=$("#e-items",box).value.split("\n").map(l=>l.split(",").map(s=>s.trim())).filter(a=>a[0]);
+    if(!items.length) return fail(out,"품목을 한 줄 이상 입력하세요.");
+    const rate=+$("#e-vat",box).value/100;
+    let sum=0;
+    const rows=items.map((a,i)=>{
+      const qty=+String(a[1]||1).replace(/[^\d.]/g,"")||1, up=+String(a[2]||0).replace(/[^\d.]/g,"")||0;
+      const amt=qty*up; sum+=amt;
+      return `<tr><td style="text-align:center">${i+1}</td><td>${a[0]}</td><td style="text-align:right">${num(qty)}</td>
+        <td style="text-align:right">${num(up)}</td><td style="text-align:right">${num(amt)}</td></tr>`;
+    }).join("");
+    const tax=Math.round(sum*rate);
+    const kind=$("#e-kind",box).value, date=$("#e-date",box).value.replace(/-/g,". ");
+    const doc=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${kind}</title><style>
+      @page{size:A4;margin:16mm}
+      body{font-family:"Malgun Gothic","맑은 고딕",sans-serif;color:#111;font-size:12px}
+      h1{text-align:center;font-size:26px;letter-spacing:.4em;margin:0 0 6px}
+      .meta{display:flex;justify-content:space-between;font-size:12px;margin-bottom:14px}
+      .to{font-size:15px;font-weight:700;border-bottom:1px solid #111;padding-bottom:4px;margin-bottom:10px}
+      .tot{font-size:15px;font-weight:700;margin:8px 0 14px}
+      table{width:100%;border-collapse:collapse}
+      th,td{border:1px solid #333;padding:6px 8px}
+      th{background:#f0f0f0;font-weight:600}
+      tfoot td{font-weight:700}
+      .from{margin-top:14px;border:1px solid #333;padding:8px 10px;width:52%;margin-left:auto;font-size:11.5px;line-height:1.7}
+      @media print{.noprint{display:none}}
+    </style></head><body>
+      <h1>${kind}</h1>
+      <div class="meta"><span>작성일: ${date}</span><span></span></div>
+      <div class="to">${$("#e-to",box).value||""} 귀하</div>
+      <div class="tot">합계 금액: 일금 ${koreanAmount(sum+tax,true)}원정 (₩${num(sum+tax)})</div>
+      <table><thead><tr><th style="width:8%">No</th><th>품명</th><th style="width:12%">수량</th><th style="width:18%">단가</th><th style="width:20%">금액</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="4" style="text-align:right">공급가액</td><td style="text-align:right">${num(sum)}</td></tr>
+      <tr><td colspan="4" style="text-align:right">부가세</td><td style="text-align:right">${num(tax)}</td></tr>
+      <tr><td colspan="4" style="text-align:right">합계</td><td style="text-align:right">${num(sum+tax)}</td></tr></tfoot></table>
+      <div class="from"><b>${$("#e-from",box).value||""}</b><br>사업자등록번호 ${$("#e-biz",box).value||""}<br>연락처 ${$("#e-tel",box).value||""}</div>
+      <p class="noprint" style="text-align:center;margin-top:24px;color:#666">Ctrl/⌘+P → 대상을 ‘PDF로 저장’으로 바꾸면 PDF가 됩니다.</p>
+      <script>window.print()<\/script></body></html>`;
+    const blob=new Blob([doc],{type:"text/html;charset=utf-8"});
+    const r=result(out,`${kind} 준비 완료`,
+      `<p style="margin:0 0 10px;font-size:13.5px">새 창에서 열면 인쇄 대화상자가 뜹니다. 대상을 <b>PDF로 저장</b>으로 바꾸면 PDF가 됩니다.</p>
+       <div class="actions"><button class="dl" id="e-open">인쇄 창 열기</button><button class="ghost" id="e-save">HTML로 저장</button></div>`);
+    r.querySelector("#e-open").onclick=()=>{const w=window.open("","_blank");if(w){w.document.write(doc);w.document.close();}};
+    r.querySelector("#e-save").onclick=()=>download(blob,kind+".html");
+  };
+});
+
+/* ---------- PDF ---------- */
+
+T("merge","pdf","PDF 합치기","여러 PDF를 순서대로 이어 하나로 만듭니다.",box=>{
+  const p=picker({accept:"application/pdf",multiple:true,title:"PDF 파일을 끌어다 놓거나 눌러서 선택",sub:"목록 순서대로 이어 붙입니다",onChange:f=>go.disabled=f.length<2});
+  const panel=el(`<div class="panel"></div>`);
+  panel.append(p.el, el(`<div class="actions"><button class="go" disabled>합치기</button></div>`), el(`<div class="out"></div>`));
+  box.append(panel);
+  const go=$(".go",panel), out=$(".out",panel);
+  go.onclick=async()=>{
+    busy(out,"합치는 중…");
+    try{
+      const doc=await PDFLib.PDFDocument.create();
+      for(const f of p.files){
+        const src=await readPdf(f);
+        const pages=await doc.copyPages(src,src.getPageIndices());
+        pages.forEach(pg=>doc.addPage(pg));
+      }
+      const bytes=await doc.save();
+      const blob=new Blob([bytes],{type:"application/pdf"});
+      const r=result(out,`${doc.getPageCount()}쪽짜리 PDF로 합쳤습니다`,`<button class="dl">내려받기 · ${kb(blob.size)}</button>`);
+      r.querySelector(".dl").onclick=()=>download(blob,"합친문서.pdf");
+    }catch(e){fail(out,"합치지 못했습니다. 암호가 걸린 PDF이거나 손상된 파일일 수 있습니다.");}
+  };
+});
+
+T("split","pdf","PDF 나누기","필요한 쪽만 뽑아내거나 낱장으로 분리합니다.",box=>{
+  const panel=el(`<div class="panel"></div>`);
+  const p=picker({accept:"application/pdf",title:"PDF 파일 선택",onChange:async f=>{
+    go.disabled=!f.length; info.textContent="";
+    if(f[0]){try{const d=await readPdf(f[0]); total=d.getPageCount(); info.textContent=`전체 ${total}쪽`;}catch(e){}}
+  }});
+  panel.append(p.el, el(`<div class="row" style="margin-top:16px">
+      <div class="field"><label>방식</label><select class="m">
+        <option value="range">지정한 쪽만 뽑기</option><option value="each">모든 쪽을 낱장으로</option></select></div>
+      <div class="field"><label>쪽 번호</label><input class="rg" placeholder="예: 1-3, 7, 10-12"></div>
+    </div>`),
+    el(`<p class="hint info"></p>`),
+    el(`<div class="actions"><button class="go" disabled>나누기</button></div>`), el(`<div class="out"></div>`));
+  box.append(panel);
+  const go=$(".go",panel), out=$(".out",panel), info=$(".info",panel), mode=$(".m",panel), rg=$(".rg",panel);
+  let total=0;
+  mode.onchange=()=>rg.disabled=mode.value==="each";
+  go.onclick=async()=>{
+    busy(out,"나누는 중…");
+    try{
+      const src=await readPdf(p.files[0]); const n=src.getPageCount(); const base=stem(p.files[0].name);
+      if(mode.value==="each"){
+        const zip=new JSZip();
+        for(let i=0;i<n;i++){
+          const d=await PDFLib.PDFDocument.create();
+          const [pg]=await d.copyPages(src,[i]); d.addPage(pg);
+          zip.file(`${base}_${String(i+1).padStart(3,"0")}.pdf`, await d.save());
+        }
+        const blob=await zip.generateAsync({type:"blob"});
+        const r=result(out,`${n}개 파일로 나눴습니다`,`<button class="dl">ZIP 내려받기 · ${kb(blob.size)}</button>`);
+        r.querySelector(".dl").onclick=()=>download(blob,base+"_낱장.zip");
+      }else{
+        const list=parseRanges(rg.value,n);
+        if(!list.length) return fail(out,`뽑을 쪽을 입력하세요. 이 문서는 1부터 ${n}쪽까지 있습니다.`);
+        const d=await PDFLib.PDFDocument.create();
+        const pages=await d.copyPages(src,list.map(i=>i-1)); pages.forEach(pg=>d.addPage(pg));
+        const blob=new Blob([await d.save()],{type:"application/pdf"});
+        const r=result(out,`${list.length}쪽을 뽑았습니다`,`<button class="dl">내려받기 · ${kb(blob.size)}</button>`);
+        r.querySelector(".dl").onclick=()=>download(blob,base+"_추출.pdf");
+      }
+    }catch(e){fail(out,"나누지 못했습니다. 암호가 걸렸거나 손상된 파일일 수 있습니다.");}
+  };
+});
+
+T("delete","pdf","PDF 페이지 삭제","필요 없는 쪽을 빼고 다시 저장합니다.",box=>{
+  const panel=el(`<div class="panel"></div>`);
+  const p=picker({accept:"application/pdf",title:"PDF 파일 선택",onChange:async f=>{
+    go.disabled=!f.length; info.textContent="";
+    if(f[0]){try{const d=await readPdf(f[0]); info.textContent=`전체 ${d.getPageCount()}쪽`;}catch(e){}}
+  }});
+  panel.append(p.el, el(`<div class="row" style="margin-top:16px"><div class="field"><label>삭제할 쪽 번호</label><input class="rg" placeholder="예: 2, 5-7"></div></div>`),
+    el(`<p class="hint info"></p>`), el(`<div class="actions"><button class="go" disabled>삭제하기</button></div>`), el(`<div class="out"></div>`));
+  box.append(panel);
+  const go=$(".go",panel), out=$(".out",panel), info=$(".info",panel), rg=$(".rg",panel);
+  go.onclick=async()=>{
+    busy(out,"처리 중…");
+    try{
+      const src=await readPdf(p.files[0]); const n=src.getPageCount();
+      const kill=new Set(parseRanges(rg.value,n));
+      if(!kill.size) return fail(out,"삭제할 쪽을 입력하세요.");
+      if(kill.size>=n) return fail(out,"모든 쪽을 지울 수는 없습니다.");
+      const keep=[]; for(let i=1;i<=n;i++) if(!kill.has(i)) keep.push(i-1);
+      const d=await PDFLib.PDFDocument.create();
+      (await d.copyPages(src,keep)).forEach(pg=>d.addPage(pg));
+      const blob=new Blob([await d.save()],{type:"application/pdf"});
+      const r=result(out,`${kill.size}쪽을 지우고 ${keep.length}쪽이 남았습니다`,`<button class="dl">내려받기 · ${kb(blob.size)}</button>`);
+      r.querySelector(".dl").onclick=()=>download(blob,stem(p.files[0].name)+"_수정.pdf");
+    }catch(e){fail(out,"처리하지 못했습니다.");}
+  };
+});
+
+T("rotate-pdf","pdf","PDF 회전","눕거나 뒤집힌 스캔본의 방향을 바로잡습니다.",box=>{
+  const panel=el(`<div class="panel"></div>`);
+  const p=picker({accept:"application/pdf",title:"PDF 파일 선택",onChange:f=>go.disabled=!f.length});
+  panel.append(p.el, el(`<div class="row" style="margin-top:16px">
+      <div class="field"><label>회전 각도</label><select class="ang">
+        <option value="90">오른쪽 90°</option><option value="180">180°</option><option value="270">왼쪽 90°</option></select></div>
+      <div class="field"><label>적용할 쪽</label><input class="rg" placeholder="비우면 전체"></div>
+    </div>`), el(`<div class="actions"><button class="go" disabled>회전하기</button></div>`), el(`<div class="out"></div>`));
+  box.append(panel);
+  const go=$(".go",panel), out=$(".out",panel);
+  go.onclick=async()=>{
+    busy(out,"회전하는 중…");
+    try{
+      const d=await readPdf(p.files[0]); const n=d.getPageCount();
+      const rgv=$(".rg",panel).value.trim();
+      const target=rgv?new Set(parseRanges(rgv,n)):null;
+      const ang=+$(".ang",panel).value;
+      d.getPages().forEach((pg,i)=>{
+        if(target&&!target.has(i+1))return;
+        pg.setRotation(PDFLib.degrees((pg.getRotation().angle+ang)%360));
+      });
+      const blob=new Blob([await d.save()],{type:"application/pdf"});
+      const r=result(out,"회전했습니다",`<button class="dl">내려받기 · ${kb(blob.size)}</button>`);
+      r.querySelector(".dl").onclick=()=>download(blob,stem(p.files[0].name)+"_회전.pdf");
+    }catch(e){fail(out,"처리하지 못했습니다.");}
+  };
+});
+
+T("jpg2pdf","pdf","사진을 PDF로 묶기","여러 장의 사진을 한 개의 PDF로 만듭니다.",box=>{
+  const panel=el(`<div class="panel"></div>`);
+  const p=picker({accept:"image/*",multiple:true,title:"사진을 끌어다 놓거나 눌러서 선택",sub:"목록 순서대로 한 쪽씩 들어갑니다",onChange:f=>go.disabled=!f.length});
+  panel.append(p.el, el(`<div class="row" style="margin-top:16px">
+      <div class="field"><label>쪽 크기</label><select class="sz"><option value="a4">A4</option><option value="fit">사진 크기에 맞춤</option></select></div>
+      <div class="field"><label>방향</label><select class="or"><option value="auto">사진에 맞춰 자동</option><option value="p">세로</option><option value="l">가로</option></select></div>
+      <div class="field"><label>여백 (mm)</label><input class="mg" type="number" value="10" min="0" max="40"></div>
+    </div>`), el(`<div class="actions"><button class="go" disabled>PDF 만들기</button></div>`), el(`<div class="out"></div>`));
+  box.append(panel);
+  const go=$(".go",panel), out=$(".out",panel);
+  go.onclick=async()=>{
+    busy(out,"만드는 중…");
+    try{
+      const doc=await PDFLib.PDFDocument.create();
+      const mg=(+$(".mg",panel).value||0)*2.834645;
+      const mode=$(".sz",panel).value, orient=$(".or",panel).value;
+      for(const f of p.files){
+        const img=await loadImage(f);
+        const cv=canvasOf(img.width,img.height); const c=cv.getContext("2d");
+        c.drawImage(img,0,0); flatten(c,cv.width,cv.height);
+        const blob=await toBlob(cv,"image/jpeg",.92);
+        const emb=await doc.embedJpg(new Uint8Array(await blob.arrayBuffer()));
+        let pw,ph;
+        if(mode==="fit"){pw=emb.width+mg*2; ph=emb.height+mg*2;}
+        else{
+          const land = orient==="l" || (orient==="auto" && emb.width>emb.height);
+          pw = land?841.89:595.28; ph = land?595.28:841.89;
+        }
+        const page=doc.addPage([pw,ph]);
+        const s=Math.min((pw-mg*2)/emb.width,(ph-mg*2)/emb.height);
+        const w=emb.width*s, h=emb.height*s;
+        page.drawImage(emb,{x:(pw-w)/2,y:(ph-h)/2,width:w,height:h});
+        await sleep();
+      }
+      const blob=new Blob([await doc.save()],{type:"application/pdf"});
+      const r=result(out,`${p.files.length}장을 PDF로 묶었습니다`,`<button class="dl">내려받기 · ${kb(blob.size)}</button>`);
+      r.querySelector(".dl").onclick=()=>download(blob,"사진묶음.pdf");
+    }catch(e){fail(out,"만들지 못했습니다. 열리지 않는 이미지가 섞여 있는지 확인해 주세요.");}
+  };
+});
+
+T("pdf2jpg","pdf","PDF를 이미지로","각 쪽을 JPG나 PNG 이미지로 뽑아냅니다.",box=>{
+  const panel=el(`<div class="panel"></div>`);
+  const p=picker({accept:"application/pdf",title:"PDF 파일 선택",onChange:f=>go.disabled=!f.length});
+  panel.append(p.el, el(`<div class="row" style="margin-top:16px">
+      <div class="field"><label>해상도</label><select class="dpi"><option value="1.5">보통 (화면용)</option><option value="2.5" selected>높음 (인쇄용)</option><option value="4">아주 높음</option></select></div>
+      <div class="field"><label>형식</label><select class="fmt"><option value="image/jpeg">JPG</option><option value="image/png">PNG</option></select></div>
+      <div class="field"><label>쪽 번호</label><input class="rg" placeholder="비우면 전체"></div>
+    </div>`), el(`<div class="actions"><button class="go" disabled>이미지로 바꾸기</button></div>`), el(`<div class="out"></div>`));
+  box.append(panel);
+  const go=$(".go",panel), out=$(".out",panel);
+  go.onclick=async()=>{
+    if(!needLib("pdfjs",out)) return;
+    busy(out,"변환하는 중…");
+    try{
+      const doc=await pdfPages(p.files[0]);
+      const rgv=$(".rg",panel).value.trim();
+      const list=rgv?parseRanges(rgv,doc.numPages):Array.from({length:doc.numPages},(_,i)=>i+1);
+      const fmt=$(".fmt",panel).value, ext=fmt==="image/png"?"png":"jpg", scale=+$(".dpi",panel).value;
+      const base=stem(p.files[0].name), zip=new JSZip(), thumbs=[];
+      for(const n of list){
+        busy(out,`변환하는 중… ${n} / ${list[list.length-1]}`);
+        const cv=await renderPage(await doc.getPage(n),scale);
+        if(fmt==="image/jpeg"){flatten(cv.getContext("2d"),cv.width,cv.height);}
+        const blob=await toBlob(cv,fmt,.92);
+        zip.file(`${base}_${String(n).padStart(3,"0")}.${ext}`,blob);
+        if(thumbs.length<12) thumbs.push({n,url:URL.createObjectURL(blob)});
+        await sleep();
+      }
+      const zblob=await zip.generateAsync({type:"blob"});
+      const r=result(out,`${list.length}장으로 변환했습니다`,
+        `<button class="dl">ZIP 내려받기 · ${kb(zblob.size)}</button>
+         <div class="thumbs">${thumbs.map(t=>`<figure><img src="${t.url}"><figcaption>${t.n}쪽</figcaption></figure>`).join("")}</div>`);
+      r.querySelector(".dl").onclick=()=>download(zblob,base+"_이미지.zip");
+    }catch(e){fail(out,"변환하지 못했습니다. 암호가 걸린 PDF일 수 있습니다.");}
+  };
+});
+
+T("pdftext","pdf","PDF 텍스트 추출","문서 안의 글자를 골라내 복사할 수 있게 합니다.",box=>{
+  const panel=el(`<div class="panel"></div>`);
+  const p=picker({accept:"application/pdf",title:"PDF 파일 선택",onChange:f=>go.disabled=!f.length});
+  panel.append(p.el, el(`<p class="hint" style="margin-top:14px">스캔한 이미지 PDF에는 글자 정보가 없어 아무것도 나오지 않습니다.</p>`),
+    el(`<div class="actions"><button class="go" disabled>텍스트 뽑기</button></div>`), el(`<div class="out"></div>`));
+  box.append(panel);
+  const go=$(".go",panel), out=$(".out",panel);
+  go.onclick=async()=>{
+    if(!needLib("pdfjs",out)) return;
+    busy(out,"읽는 중…");
+    try{
+      const doc=await pdfPages(p.files[0]); let all="";
+      for(let n=1;n<=doc.numPages;n++){
+        const tc=await (await doc.getPage(n)).getTextContent();
+        let line="", y=null, buf=[];
+        tc.items.forEach(it=>{
+          const ny=Math.round(it.transform[5]);
+          if(y!==null&&Math.abs(ny-y)>2){buf.push(line);line="";}
+          line+=it.str; y=ny;
+        });
+        buf.push(line);
+        all+=`— ${n}쪽 —\n`+buf.join("\n").replace(/\n{3,}/g,"\n\n")+"\n\n";
+        await sleep();
+      }
+      const text=all.trim();
+      if(!text.replace(/—\s*\d+쪽\s*—/g,"").trim())
+        return fail(out,"글자 정보가 없는 PDF입니다. 스캔본이라면 문자 인식(OCR)이 필요합니다.");
+      const r=result(out,`${doc.numPages}쪽에서 ${num(text.length)}자를 뽑았습니다`,
+        `<pre class="txt"></pre><div class="actions"><button class="dl">TXT 내려받기</button><button class="ghost cp">복사하기</button></div>`);
+      r.querySelector("pre").textContent=text;
+      r.querySelector(".dl").onclick=()=>download(new Blob([text],{type:"text/plain;charset=utf-8"}),stem(p.files[0].name)+".txt");
+      r.querySelector(".cp").onclick=async e=>{await navigator.clipboard.writeText(text);e.target.textContent="복사했습니다";};
+    }catch(e){fail(out,"읽지 못했습니다. 암호가 걸린 PDF일 수 있습니다.");}
+  };
+});
+
+
+/* ---------- 이미지 ---------- */
+
+T("shrink","img","사진 용량 줄이기","목표 용량 아래로 떨어질 때까지 자동으로 압축합니다.",box=>{
+  const panel=el(`<div class="panel"></div>`);
+  const p=picker({accept:"image/*",multiple:true,title:"사진을 끌어다 놓거나 눌러서 선택",onChange:f=>go.disabled=!f.length});
+  panel.append(p.el, el(`<div class="row" style="margin-top:16px">
+      <div class="field"><label>목표 용량</label><select class="tg">
+        <option value="0.3">300KB 이하</option><option value="0.5">500KB 이하</option>
+        <option value="1" selected>1MB 이하</option><option value="2">2MB 이하</option><option value="5">5MB 이하</option></select></div>
+      <div class="field"><label>최대 가로·세로 (px)</label><input class="mx" type="number" value="2000" min="300" max="6000"></div>
+    </div>`),
+    el(`<p class="hint">화질을 먼저 낮추고, 그래도 크면 크기를 줄입니다. 원본은 바뀌지 않습니다.</p>`),
+    el(`<div class="actions"><button class="go" disabled>용량 줄이기</button></div>`), el(`<div class="out"></div>`));
+  box.append(panel);
+  const go=$(".go",panel), out=$(".out",panel);
+  go.onclick=async()=>{
+    busy(out,"압축하는 중…");
+    try{
+      const target=+$(".tg",panel).value*1024*1024, maxDim=+$(".mx",panel).value;
+      const done=[]; let before=0, after=0;
+      for(const f of p.files){
+        const img=await loadImage(f);
+        let scale=Math.min(1,maxDim/Math.max(img.width,img.height)), blob=null;
+        for(let round=0;round<6;round++){
+          const cv=canvasOf(img.width*scale,img.height*scale);
+          const c=cv.getContext("2d"); c.imageSmoothingQuality="high";
+          c.drawImage(img,0,0,cv.width,cv.height); flatten(c,cv.width,cv.height);
+          let lo=.35, hi=.95, best=await toBlob(cv,"image/jpeg",hi);
+          if(best.size>target){
+            for(let i=0;i<7;i++){
+              const mid=(lo+hi)/2, t=await toBlob(cv,"image/jpeg",mid);
+              if(t.size<=target){best=t;lo=mid;}else{hi=mid;}
+            }
+            if(best.size>target){best=await toBlob(cv,"image/jpeg",.35);}
+          }
+          blob=best;
+          if(blob.size<=target||scale<0.25) break;
+          scale*=0.8;
+          await sleep();
+        }
+        before+=f.size; after+=blob.size;
+        done.push({name:stem(f.name)+"_압축.jpg",blob,ok:blob.size<=target});
+      }
+      const r=result(out,`${done.length}장 · ${kb(before)} → ${kb(after)} (${Math.round((1-after/before)*100)}% 감소)`,
+        `<div class="actions"><button class="dl">${done.length>1?"ZIP 내려받기":"내려받기"}</button></div>
+         <ul class="files">${done.map(d=>`<li><span>${d.name}</span><span class="sz">${kb(d.blob.size)}${d.ok?"":" · 목표 초과"}</span></li>`).join("")}</ul>`);
+      r.querySelector(".dl").onclick=async()=>{
+        if(done.length===1) return download(done[0].blob,done[0].name);
+        const zip=new JSZip(); done.forEach(d=>zip.file(d.name,d.blob));
+        download(await zip.generateAsync({type:"blob"}),"압축사진.zip");
+      };
+    }catch(e){fail(out,"압축하지 못했습니다. 지원하지 않는 형식일 수 있습니다.");}
+  };
+});
+
+T("resize","img","이미지 크기 바꾸기","가로·세로 픽셀을 지정해 다시 저장합니다.",box=>{
+  const panel=el(`<div class="panel"></div>`);
+  let iw=0,ih=0;
+  const p=picker({accept:"image/*",title:"이미지 선택",onChange:async f=>{
+    go.disabled=!f.length;
+    if(f[0]){const im=await loadImage(f[0]); iw=im.width; ih=im.height;
+      $(".w",panel).value=iw; $(".h",panel).value=ih;
+      $(".info",panel).textContent=`원본 ${iw} × ${ih} px`;}
+  }});
+  panel.append(p.el, el(`<div class="row" style="margin-top:16px">
+      <div class="field"><label>가로 (px)</label><input class="w" type="number" min="1"></div>
+      <div class="field"><label>세로 (px)</label><input class="h" type="number" min="1"></div>
+      <div class="field"><label>비율</label><select class="lock"><option value="1">유지</option><option value="0">무시</option></select></div>
+      <div class="field"><label>형식</label><select class="fmt"><option value="image/jpeg">JPG</option><option value="image/png">PNG</option><option value="image/webp">WebP</option></select></div>
+    </div>`), el(`<p class="hint info"></p>`),
+    el(`<div class="actions"><button class="go" disabled>크기 바꾸기</button></div>`), el(`<div class="out"></div>`));
+  box.append(panel);
+  const go=$(".go",panel), out=$(".out",panel), W=$(".w",panel), H=$(".h",panel);
+  W.oninput=()=>{if($(".lock",panel).value==="1"&&iw) H.value=Math.round(W.value*ih/iw);};
+  H.oninput=()=>{if($(".lock",panel).value==="1"&&ih) W.value=Math.round(H.value*iw/ih);};
+  go.onclick=async()=>{
+    busy(out,"처리 중…");
+    try{
+      const img=await loadImage(p.files[0]);
+      const cv=canvasOf(+W.value||img.width,+H.value||img.height);
+      const c=cv.getContext("2d"); c.imageSmoothingQuality="high";
+      c.drawImage(img,0,0,cv.width,cv.height);
+      const fmt=$(".fmt",panel).value;
+      if(fmt==="image/jpeg") flatten(c,cv.width,cv.height);
+      const blob=await toBlob(cv,fmt,.92), ext=fmt.split("/")[1].replace("jpeg","jpg");
+      const r=result(out,`${cv.width} × ${cv.height} px로 바꿨습니다`,
+        `<img src="${URL.createObjectURL(blob)}" style="max-width:100%;max-height:260px;border:1px solid var(--line)">
+         <div class="actions"><button class="dl">내려받기 · ${kb(blob.size)}</button></div>`);
+      r.querySelector(".dl").onclick=()=>download(blob,stem(p.files[0].name)+`_${cv.width}x${cv.height}.`+ext);
+    }catch(e){fail(out,"처리하지 못했습니다.");}
+  };
+});
+
+T("crop","img","이미지 자르기","드래그해서 필요한 부분만 남깁니다.",box=>{
+  const panel=el(`<div class="panel"></div>`);
+  const p=picker({accept:"image/*",title:"이미지 선택",onChange:f=>{if(f[0])setup(f[0]);}});
+  panel.append(p.el, el(`<p class="hint" style="margin-top:14px">미리보기 위에서 드래그하면 자를 영역이 정해집니다.</p>`),
+    el(`<div class="stage" style="position:relative;display:none;overflow:hidden;border:1px solid var(--line);background:#fff;max-width:100%"></div>`),
+    el(`<div class="actions"><button class="go" disabled>자르기</button></div>`), el(`<div class="out"></div>`));
+  box.append(panel);
+  const stage=$(".stage",panel), go=$(".go",panel), out=$(".out",panel);
+  let img=null, sel=null;
+  async function setup(file){
+    img=await loadImage(file);
+    stage.style.display="block"; stage.innerHTML="";
+    const cv=canvasOf(img.width,img.height); cv.style.maxWidth="100%"; cv.style.display="block";
+    cv.getContext("2d").drawImage(img,0,0); stage.appendChild(cv);
+    const mark=el(`<div style="position:absolute;border:2px dashed var(--stamp);background:rgba(190,42,47,.12);display:none;pointer-events:none"></div>`);
+    stage.appendChild(mark);
+    let sx=0,sy=0,drag=false;
+    const pos=e=>{const r=stage.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return {x:t.clientX-r.left,y:t.clientY-r.top,r};};
+    const start=e=>{const p1=pos(e);sx=p1.x;sy=p1.y;drag=true;mark.style.display="block";};
+    const move=e=>{
+      if(!drag)return; e.preventDefault();
+      const p1=pos(e), x=Math.min(sx,p1.x), y=Math.min(sy,p1.y), w=Math.abs(p1.x-sx), h=Math.abs(p1.y-sy);
+      Object.assign(mark.style,{left:x+"px",top:y+"px",width:w+"px",height:h+"px"});
+      const k=img.width/p1.r.width;
+      sel={x:x*k,y:y*k,w:w*k,h:h*k}; go.disabled=w<5||h<5;
+    };
+    const end=()=>drag=false;
+    stage.addEventListener("mousedown",start); window.addEventListener("mousemove",move); window.addEventListener("mouseup",end);
+    stage.addEventListener("touchstart",start,{passive:true}); stage.addEventListener("touchmove",move,{passive:false}); stage.addEventListener("touchend",end);
+  }
+  go.onclick=async()=>{
+    if(!sel) return;
+    const cv=canvasOf(sel.w,sel.h);
+    cv.getContext("2d").drawImage(img,sel.x,sel.y,sel.w,sel.h,0,0,cv.width,cv.height);
+    const blob=await toBlob(cv,"image/png");
+    const r=result(out,`${cv.width} × ${cv.height} px로 잘랐습니다`,
+      `<img src="${URL.createObjectURL(blob)}" style="max-width:100%;max-height:260px;border:1px solid var(--line)">
+       <div class="actions"><button class="dl">PNG 내려받기 · ${kb(blob.size)}</button></div>`);
+    r.querySelector(".dl").onclick=()=>download(blob,stem(p.files[0].name)+"_자름.png");
+  };
+});
+
+T("rotate-img","img","이미지 회전·반전","방향을 돌리거나 좌우·상하로 뒤집습니다.",box=>{
+  const panel=el(`<div class="panel"></div>`);
+  const p=picker({accept:"image/*",multiple:true,title:"이미지 선택",onChange:f=>go.disabled=!f.length});
+  panel.append(p.el, el(`<div class="row" style="margin-top:16px">
+      <div class="field"><label>회전</label><select class="ang"><option value="0">없음</option><option value="90">오른쪽 90°</option><option value="180">180°</option><option value="270">왼쪽 90°</option></select></div>
+      <div class="field"><label>뒤집기</label><select class="fl"><option value="none">없음</option><option value="h">좌우</option><option value="v">상하</option></select></div>
+      <div class="field"><label>형식</label><select class="fmt"><option value="image/jpeg">JPG</option><option value="image/png">PNG</option></select></div>
+    </div>`), el(`<div class="actions"><button class="go" disabled>적용하기</button></div>`), el(`<div class="out"></div>`));
+  box.append(panel);
+  const go=$(".go",panel), out=$(".out",panel);
+  go.onclick=async()=>{
+    busy(out,"처리 중…");
+    try{
+      const ang=+$(".ang",panel).value, fl=$(".fl",panel).value, fmt=$(".fmt",panel).value;
+      const ext=fmt==="image/png"?"png":"jpg", done=[];
+      for(const f of p.files){
+        const img=await loadImage(f);
+        const swap=ang===90||ang===270;
+        const cv=canvasOf(swap?img.height:img.width, swap?img.width:img.height);
+        const c=cv.getContext("2d");
+        c.translate(cv.width/2,cv.height/2);
+        c.rotate(ang*Math.PI/180);
+        c.scale(fl==="h"?-1:1, fl==="v"?-1:1);
+        c.drawImage(img,-img.width/2,-img.height/2);
+        c.setTransform(1,0,0,1,0,0);
+        if(fmt==="image/jpeg") flatten(c,cv.width,cv.height);
+        done.push({name:stem(f.name)+"_회전."+ext,blob:await toBlob(cv,fmt,.92)});
+        await sleep();
+      }
+      const r=result(out,`${done.length}장 처리했습니다`,
+        `<div class="thumbs">${done.map(d=>`<figure><img src="${URL.createObjectURL(d.blob)}"><figcaption>${kb(d.blob.size)}</figcaption></figure>`).join("")}</div>
+         <div class="actions"><button class="dl">${done.length>1?"ZIP 내려받기":"내려받기"}</button></div>`);
+      r.querySelector(".dl").onclick=async()=>{
+        if(done.length===1) return download(done[0].blob,done[0].name);
+        const zip=new JSZip(); done.forEach(d=>zip.file(d.name,d.blob));
+        download(await zip.generateAsync({type:"blob"}),"회전이미지.zip");
+      };
+    }catch(e){fail(out,"처리하지 못했습니다.");}
+  };
+});
+
+T("convert","img","이미지 형식 바꾸기","WebP·PNG·JPG 사이에서 형식을 바꿉니다.",box=>{
+  const panel=el(`<div class="panel"></div>`);
+  const p=picker({accept:"image/*",multiple:true,title:"이미지 선택",sub:"WebP, PNG, JPG, BMP, GIF 첫 장",onChange:f=>go.disabled=!f.length});
+  panel.append(p.el, el(`<div class="row" style="margin-top:16px">
+      <div class="field"><label>바꿀 형식</label><select class="fmt"><option value="image/jpeg">JPG</option><option value="image/png">PNG</option><option value="image/webp">WebP</option></select></div>
+      <div class="field"><label>화질</label><input class="q" type="range" min="40" max="100" value="92"><span class="mono qv" style="font-size:12px">92</span></div>
+      <div class="field"><label>투명 배경 채우기</label><select class="bgc"><option value="#ffffff">흰색</option><option value="#000000">검정</option></select></div>
+    </div>`), el(`<div class="actions"><button class="go" disabled>변환하기</button></div>`), el(`<div class="out"></div>`));
+  box.append(panel);
+  const go=$(".go",panel), out=$(".out",panel), q=$(".q",panel);
+  q.oninput=()=>$(".qv",panel).textContent=q.value;
+  go.onclick=async()=>{
+    busy(out,"변환하는 중…");
+    try{
+      const fmt=$(".fmt",panel).value, ext=fmt.split("/")[1].replace("jpeg","jpg"), done=[];
+      for(const f of p.files){
+        const img=await loadImage(f);
+        const cv=canvasOf(img.width,img.height), c=cv.getContext("2d");
+        c.drawImage(img,0,0);
+        if(fmt==="image/jpeg") flatten(c,cv.width,cv.height,$(".bgc",panel).value);
+        done.push({name:stem(f.name)+"."+ext,blob:await toBlob(cv,fmt,+q.value/100)});
+        await sleep();
+      }
+      const r=result(out,`${done.length}장을 ${ext.toUpperCase()}로 바꿨습니다`,
+        `<ul class="files">${done.map(d=>`<li><span>${d.name}</span><span class="sz">${kb(d.blob.size)}</span></li>`).join("")}</ul>
+         <div class="actions"><button class="dl">${done.length>1?"ZIP 내려받기":"내려받기"}</button></div>`);
+      r.querySelector(".dl").onclick=async()=>{
+        if(done.length===1) return download(done[0].blob,done[0].name);
+        const zip=new JSZip(); done.forEach(d=>zip.file(d.name,d.blob));
+        download(await zip.generateAsync({type:"blob"}),"변환이미지.zip");
+      };
+    }catch(e){fail(out,"변환하지 못했습니다.");}
+  };
+});
+
+T("heic","img","HEIC를 JPG로","아이폰 사진을 어디서나 열리는 JPG로 바꿉니다.",box=>{
+  const panel=el(`<div class="panel"></div>`);
+  const p=picker({accept:".heic,.heif,image/heic,image/heif",multiple:true,title:"HEIC 파일 선택",sub:"아이폰에서 그대로 옮긴 사진",onChange:f=>go.disabled=!f.length});
+  panel.append(p.el, el(`<div class="row" style="margin-top:16px">
+      <div class="field"><label>형식</label><select class="fmt"><option value="image/jpeg">JPG</option><option value="image/png">PNG</option></select></div>
+      <div class="field"><label>화질</label><input class="q" type="range" min="50" max="100" value="90"><span class="mono qv" style="font-size:12px">90</span></div>
+    </div>`),
+    el(`<p class="hint">아이폰 설정 → 카메라 → 포맷을 ‘높은 호환성’으로 바꾸면 다음부터는 바로 JPG로 찍힙니다.</p>`),
+    el(`<div class="actions"><button class="go" disabled>JPG로 바꾸기</button></div>`), el(`<div class="out"></div>`));
+  box.append(panel);
+  const go=$(".go",panel), out=$(".out",panel), q=$(".q",panel);
+  q.oninput=()=>$(".qv",panel).textContent=q.value;
+  go.onclick=async()=>{
+    if(!needLib("heic",out)) return;
+    busy(out,"변환하는 중…");
+    try{
+      const fmt=$(".fmt",panel).value, ext=fmt==="image/png"?"png":"jpg", done=[];
+      for(const f of p.files){
+        busy(out,`변환하는 중… ${f.name}`);
+        let blob=await heic2any({blob:f,toType:fmt,quality:+q.value/100});
+        if(Array.isArray(blob)) blob=blob[0];
+        done.push({name:stem(f.name)+"."+ext,blob});
+        await sleep();
+      }
+      const r=result(out,`${done.length}장을 변환했습니다`,
+        `<div class="thumbs">${done.slice(0,12).map(d=>`<figure><img src="${URL.createObjectURL(d.blob)}"><figcaption>${kb(d.blob.size)}</figcaption></figure>`).join("")}</div>
+         <div class="actions"><button class="dl">${done.length>1?"ZIP 내려받기":"내려받기"}</button></div>`);
+      r.querySelector(".dl").onclick=async()=>{
+        if(done.length===1) return download(done[0].blob,done[0].name);
+        const zip=new JSZip(); done.forEach(d=>zip.file(d.name,d.blob));
+        download(await zip.generateAsync({type:"blob"}),"HEIC변환.zip");
+      };
+    }catch(e){fail(out,"변환하지 못했습니다. HEIC 파일이 맞는지 확인해 주세요.");}
+  };
+});
+
+T("stamp","img","도장 배경 지우기","스캔한 도장의 흰 배경을 투명하게 만듭니다.",box=>{
+  const panel=el(`<div class="panel"></div>`);
+  const p=picker({accept:"image/*",title:"도장 이미지 선택",sub:"흰 종이에 찍어 스캔한 이미지가 가장 잘 됩니다",onChange:f=>{go.disabled=!f.length;if(f[0])run();}});
+  panel.append(p.el, el(`<div class="row" style="margin-top:16px">
+      <div class="field"><label>지울 밝기 기준</label><input class="th" type="range" min="120" max="250" value="205"><span class="mono tv" style="font-size:12px">205</span></div>
+      <div class="field"><label>가장자리 다듬기</label><input class="sm" type="range" min="0" max="60" value="25"><span class="mono sv" style="font-size:12px">25</span></div>
+      <div class="field"><label>붉은 인주 보호</label><select class="keep"><option value="1">사용</option><option value="0">끄기</option></select></div>
+    </div>`),
+    el(`<p class="hint">기준을 낮추면 옅은 배경까지 지워지고, 너무 낮추면 도장 획도 사라집니다.</p>`),
+    el(`<div class="actions"><button class="go" disabled>다시 적용</button></div>`), el(`<div class="out"></div>`));
+  box.append(panel);
+  const go=$(".go",panel), out=$(".out",panel);
+  const th=$(".th",panel), sm=$(".sm",panel);
+  th.oninput=()=>{$(".tv",panel).textContent=th.value;run();};
+  sm.oninput=()=>{$(".sv",panel).textContent=sm.value;run();};
+  $(".keep",panel).onchange=run; go.onclick=run;
+  async function run(){
+    if(!p.files.length) return;
+    try{
+      const img=await loadImage(p.files[0]);
+      const cv=canvasOf(img.width,img.height), c=cv.getContext("2d");
+      c.drawImage(img,0,0);
+      const d=c.getImageData(0,0,cv.width,cv.height), a=d.data;
+      const T0=+th.value, soft=+sm.value, keepRed=$(".keep",panel).value==="1";
+      for(let i=0;i<a.length;i+=4){
+        const r=a[i],g=a[i+1],b=a[i+2];
+        if(keepRed && r>90 && r-Math.max(g,b)>34) continue;
+        const lum=0.299*r+0.587*g+0.114*b;
+        if(lum>=T0){a[i+3]=0;}
+        else if(soft>0 && lum>T0-soft){a[i+3]=Math.round(a[i+3]*(T0-lum)/soft);}
+      }
+      c.putImageData(d,0,0);
+      const blob=await toBlob(cv,"image/png");
+      const r2=result(out,"배경을 투명하게 만들었습니다",
+        `<img src="${URL.createObjectURL(blob)}" style="max-width:100%;max-height:280px;border:1px solid var(--line);background:repeating-conic-gradient(#EFEFEF 0 25%,#fff 0 50%) 50%/16px 16px">
+         <div class="actions"><button class="dl">투명 PNG 내려받기 · ${kb(blob.size)}</button></div>`);
+      r2.querySelector(".dl").onclick=()=>download(blob,stem(p.files[0].name)+"_투명.png");
+    }catch(e){fail(out,"처리하지 못했습니다.");}
+  }
+});
+
+T("join","img","사진 이어붙이기","여러 장을 세로 또는 가로로 한 장에 붙입니다.",box=>{
+  const panel=el(`<div class="panel"></div>`);
+  const p=picker({accept:"image/*",multiple:true,title:"사진 선택",sub:"목록 순서대로 이어 붙입니다",onChange:f=>go.disabled=f.length<2});
+  panel.append(p.el, el(`<div class="row" style="margin-top:16px">
+      <div class="field"><label>방향</label><select class="dir"><option value="v">세로로 붙이기</option><option value="h">가로로 붙이기</option></select></div>
+      <div class="field"><label>사이 여백 (px)</label><input class="gap" type="number" value="0" min="0" max="120"></div>
+      <div class="field"><label>배경색</label><select class="bg"><option value="#ffffff">흰색</option><option value="#131A17">검정</option></select></div>
+    </div>`), el(`<div class="actions"><button class="go" disabled>이어붙이기</button></div>`), el(`<div class="out"></div>`));
+  box.append(panel);
+  const go=$(".go",panel), out=$(".out",panel);
+  go.onclick=async()=>{
+    busy(out,"붙이는 중…");
+    try{
+      const imgs=[]; for(const f of p.files) imgs.push(await loadImage(f));
+      const dir=$(".dir",panel).value, gap=+$(".gap",panel).value||0, bg=$(".bg",panel).value;
+      let W,H;
+      if(dir==="v"){
+        W=Math.max(...imgs.map(i=>i.width));
+        H=imgs.reduce((s,i)=>s+Math.round(i.height*W/i.width),0)+gap*(imgs.length-1);
+      }else{
+        H=Math.max(...imgs.map(i=>i.height));
+        W=imgs.reduce((s,i)=>s+Math.round(i.width*H/i.height),0)+gap*(imgs.length-1);
+      }
+      const cv=canvasOf(W,H), c=cv.getContext("2d");
+      c.fillStyle=bg; c.fillRect(0,0,W,H); c.imageSmoothingQuality="high";
+      let off=0;
+      imgs.forEach(i=>{
+        if(dir==="v"){const h=Math.round(i.height*W/i.width); c.drawImage(i,0,off,W,h); off+=h+gap;}
+        else{const w=Math.round(i.width*H/i.height); c.drawImage(i,off,0,w,H); off+=w+gap;}
+      });
+      const blob=await toBlob(cv,"image/jpeg",.92);
+      const r=result(out,`${imgs.length}장을 ${W} × ${H} px 한 장으로 붙였습니다`,
+        `<img src="${URL.createObjectURL(blob)}" style="max-width:100%;max-height:300px;border:1px solid var(--line)">
+         <div class="actions"><button class="dl">내려받기 · ${kb(blob.size)}</button></div>`);
+      r.querySelector(".dl").onclick=()=>download(blob,"이어붙인사진.jpg");
+    }catch(e){fail(out,"붙이지 못했습니다.");}
+  };
+});
+
+T("datestamp","img","사진에 날짜 넣기","촬영 기록용으로 날짜·문구를 사진 위에 적습니다.",box=>{
+  const panel=el(`<div class="panel"></div>`);
+  const p=picker({accept:"image/*",multiple:true,title:"사진 선택",onChange:f=>go.disabled=!f.length});
+  panel.append(p.el, el(`<div class="row" style="margin-top:16px">
+      <div class="field"><label>표시할 내용</label><input class="txt" placeholder="비우면 오늘 날짜"></div>
+      <div class="field"><label>위치</label><select class="pos">
+        <option value="br">오른쪽 아래</option><option value="bl">왼쪽 아래</option>
+        <option value="tr">오른쪽 위</option><option value="tl">왼쪽 위</option></select></div>
+      <div class="field"><label>글자 크기</label><input class="fs" type="range" min="1" max="8" value="3"></div>
+      <div class="field"><label>색</label><select class="col"><option value="#FFCC33">노랑</option><option value="#ffffff">흰색</option><option value="#BE2A2F">빨강</option></select></div>
+    </div>`), el(`<div class="actions"><button class="go" disabled>날짜 넣기</button></div>`), el(`<div class="out"></div>`));
+  box.append(panel);
+  const go=$(".go",panel), out=$(".out",panel);
+  go.onclick=async()=>{
+    busy(out,"처리 중…");
+    try{
+      const d=new Date();
+      const auto=`${d.getFullYear()}. ${String(d.getMonth()+1).padStart(2,"0")}. ${String(d.getDate()).padStart(2,"0")}`;
+      const text=$(".txt",panel).value.trim()||auto;
+      const pos=$(".pos",panel).value, col=$(".col",panel).value, k=+$(".fs",panel).value/100;
+      const done=[];
+      for(const f of p.files){
+        const img=await loadImage(f);
+        const cv=canvasOf(img.width,img.height), c=cv.getContext("2d");
+        c.drawImage(img,0,0);
+        const fs=Math.max(14,Math.round(Math.min(cv.width,cv.height)*k)), pad=Math.round(fs*0.8);
+        c.font=`700 ${fs}px "IBM Plex Mono", monospace`;
+        c.textBaseline=pos[0]==="t"?"top":"bottom";
+        c.textAlign=pos[1]==="l"?"left":"right";
+        const x=pos[1]==="l"?pad:cv.width-pad, y=pos[0]==="t"?pad:cv.height-pad;
+        c.shadowColor="rgba(0,0,0,.65)"; c.shadowBlur=Math.round(fs*0.28);
+        c.fillStyle=col; c.fillText(text,x,y);
+        done.push({name:stem(f.name)+"_날짜.jpg",blob:await toBlob(cv,"image/jpeg",.92)});
+        await sleep();
+      }
+      const r=result(out,`${done.length}장에 넣었습니다`,
+        `<div class="thumbs">${done.slice(0,12).map(x=>`<figure><img src="${URL.createObjectURL(x.blob)}"><figcaption>${kb(x.blob.size)}</figcaption></figure>`).join("")}</div>
+         <div class="actions"><button class="dl">${done.length>1?"ZIP 내려받기":"내려받기"}</button></div>`);
+      r.querySelector(".dl").onclick=async()=>{
+        if(done.length===1) return download(done[0].blob,done[0].name);
+        const zip=new JSZip(); done.forEach(x=>zip.file(x.name,x.blob));
+        download(await zip.generateAsync({type:"blob"}),"날짜사진.zip");
+      };
+    }catch(e){fail(out,"처리하지 못했습니다.");}
+  };
+});
+
+T("base64","img","이미지를 Base64로","HTML·CSS에 바로 붙여 넣을 수 있는 문자열로 바꿉니다.",box=>{
+  const panel=el(`<div class="panel"></div>`);
+  const p=picker({accept:"image/*",title:"이미지 선택",onChange:f=>go.disabled=!f.length});
+  panel.append(p.el, el(`<div class="row" style="margin-top:16px"><div class="field"><label>출력 형태</label>
+    <select class="k"><option value="raw">Base64 문자열만</option><option value="uri">data URI</option><option value="img">&lt;img&gt; 태그</option><option value="css">CSS background</option></select></div></div>`),
+    el(`<p class="hint">큰 이미지는 문자열이 원본보다 약 33% 커집니다. 아이콘처럼 작은 파일에 알맞습니다.</p>`),
+    el(`<div class="actions"><button class="go" disabled>변환하기</button></div>`), el(`<div class="out"></div>`));
+  box.append(panel);
+  const go=$(".go",panel), out=$(".out",panel);
+  go.onclick=()=>{
+    const f=p.files[0]; const rd=new FileReader();
+    busy(out,"읽는 중…");
+    rd.onload=()=>{
+      const uri=rd.result, raw=uri.split(",")[1], kind=$(".k",panel).value;
+      const text = kind==="raw"?raw : kind==="uri"?uri :
+        kind==="img"?`<img src="${uri}" alt="">` : `background-image:url("${uri}");`;
+      const r=result(out,`${num(text.length)}자로 변환했습니다`,
+        `<pre class="txt"></pre><div class="actions"><button class="ghost cp">복사하기</button><button class="dl">TXT 내려받기</button></div>`);
+      r.querySelector("pre").textContent=text;
+      r.querySelector(".cp").onclick=async e=>{await navigator.clipboard.writeText(text);e.target.textContent="복사했습니다";};
+      r.querySelector(".dl").onclick=()=>download(new Blob([text],{type:"text/plain"}),stem(f.name)+"_base64.txt");
+    };
+    rd.onerror=()=>fail(out,"읽지 못했습니다.");
+    rd.readAsDataURL(f);
+  };
+});
+
+/* ===================== 자가진단 ===================== */
+async function selfTest(out){
+  const T=[];
+  const step=async(name,fn)=>{
+    try{ const note=await fn(); T.push({name,ok:true,note:note||""}); }
+    catch(e){ T.push({name,ok:false,note:String(e.message||e).slice(0,90)}); }
+    paint();
+    await sleep();
+  };
+  const paint=()=>{
+    const pass=T.filter(t=>t.ok).length;
+    out.innerHTML=`<div class="result"><h3>자가진단 ${pass} / ${T.length} 통과</h3>
+      <table class="calc"><tbody>${T.map(t=>
+        `<tr><td>${t.ok?"✅":"❌"} ${t.name}</td><td style="color:${t.ok?"var(--ink3)":"var(--stamp)"};font-size:12px">${t.note}</td></tr>`
+      ).join("")}</tbody></table></div>`;
+  };
+  paint();
+
+  await libsReady;
+  for(const lib of LIBS){
+    await step(`모듈 적재 — ${lib.label}`,()=>{
+      const st=LIBSTATE[lib.key];
+      if(!st||!st.ok) throw new Error("불러오기 실패");
+      return new URL(st.url).hostname;
+    });
+  }
+
+  await step("금액 한글 변환",()=>{
+    const a=koreanAmount(1234567,true), b=koreanAmount(1000,false);
+    if(a!=="일백이십삼만사천오백육십칠") throw new Error("결과 "+a);
+    if(b!=="천") throw new Error("결과 "+b);
+    return "1,234,567 → "+a;
+  });
+
+  await step("캔버스 → JPG 변환",async()=>{
+    const cv=canvasOf(120,80), c=cv.getContext("2d");
+    c.fillStyle="#17505C"; c.fillRect(0,0,120,80);
+    const b=await toBlob(cv,"image/jpeg",.9);
+    if(!b||b.size<100) throw new Error("빈 결과");
+    return kb(b.size);
+  });
+
+  await step("캔버스 → 투명 PNG",async()=>{
+    const cv=canvasOf(60,60), c=cv.getContext("2d");
+    c.fillStyle="#fff"; c.fillRect(0,0,60,60);
+    const d=c.getImageData(0,0,60,60); d.data[3]=0; c.putImageData(d,0,0);
+    const b=await toBlob(cv,"image/png");
+    if(!b) throw new Error("빈 결과");
+    return kb(b.size);
+  });
+
+  let madePdf=null;
+  await step("PDF 새로 만들기",async()=>{
+    const doc=await PDFLib.PDFDocument.create();
+    const pg=doc.addPage([300,200]);
+    pg.drawText("self test",{x:24,y:100,size:18});
+    madePdf=await doc.save();
+    if(madePdf.length<300) throw new Error("결과가 너무 작음");
+    return kb(madePdf.length);
+  });
+
+  await step("PDF 합치기 · 쪽 삭제 · 회전",async()=>{
+    const a=await PDFLib.PDFDocument.load(madePdf);
+    const doc=await PDFLib.PDFDocument.create();
+    for(let i=0;i<3;i++){ const [pg]=await doc.copyPages(a,[0]); doc.addPage(pg); }
+    doc.getPages()[0].setRotation(PDFLib.degrees(90));
+    const merged=await doc.save();
+    const back=await PDFLib.PDFDocument.load(merged);
+    if(back.getPageCount()!==3) throw new Error("쪽 수 "+back.getPageCount());
+    return "3쪽 생성 확인";
+  });
+
+  await step("사진 → PDF 삽입",async()=>{
+    const cv=canvasOf(200,140); const c=cv.getContext("2d");
+    c.fillStyle="#BE2A2F"; c.fillRect(0,0,200,140);
+    const blob=await toBlob(cv,"image/jpeg",.9);
+    const doc=await PDFLib.PDFDocument.create();
+    const emb=await doc.embedJpg(new Uint8Array(await blob.arrayBuffer()));
+    doc.addPage([595.28,841.89]).drawImage(emb,{x:40,y:400,width:emb.width,height:emb.height});
+    const bytes=await doc.save();
+    if(bytes.length<500) throw new Error("결과가 너무 작음");
+    return kb(bytes.length);
+  });
+
+  await step("PDF 화면 렌더링 (pdf.js)",async()=>{
+    const doc=await pdfjsLib.getDocument({data:madePdf.slice()}).promise;
+    const cv=await renderPage(await doc.getPage(1),1.5);
+    if(cv.width<10) throw new Error("빈 캔버스");
+    return `${cv.width} × ${cv.height} px`;
+  });
+
+  await step("PDF 텍스트 추출",async()=>{
+    const doc=await pdfjsLib.getDocument({data:madePdf.slice()}).promise;
+    const tc=await (await doc.getPage(1)).getTextContent();
+    const txt=tc.items.map(i=>i.str).join("");
+    if(!txt.includes("self")) throw new Error("추출 결과 «"+txt+"»");
+    return "«"+txt+"»";
+  });
+
+  await step("ZIP 묶기",async()=>{
+    const zip=new JSZip();
+    zip.file("a.txt","가나다"); zip.file("b.bin",madePdf);
+    const b=await zip.generateAsync({type:"blob"});
+    if(b.size<100) throw new Error("빈 결과");
+    return kb(b.size);
+  });
+
+  await step("쪽 번호 해석 (1-3, 7)",()=>{
+    const r=parseRanges("1-3, 7, 99",10).join(",");
+    if(r!=="1,2,3,7") throw new Error("결과 "+r);
+    return r;
+  });
+
+  await step("세금 계산",()=>{
+    const supply=Math.round(1100000/1.1);
+    if(supply!==1000000) throw new Error("부가세 역산 오류");
+    const inc=Math.floor(1000000*0.03/10)*10;
+    if(inc!==30000) throw new Error("원천징수 오류");
+    return "부가세 · 3.3% 정상";
+  });
+
+  await step("파일 내려받기 기능",()=>{
+    const a=document.createElement("a");
+    if(!("download" in a)) throw new Error("브라우저가 지원하지 않음");
+    if(!window.URL||!URL.createObjectURL) throw new Error("URL API 없음");
+    return "지원함";
+  });
+
+  const bad=T.filter(t=>!t.ok);
+  out.insertAdjacentHTML("beforeend", bad.length
+    ? `<p class="err">${bad.length}개 항목이 실패했습니다. 위 오류 내용을 알려주시면 고치겠습니다.</p>`
+    : `<div class="stamp">완료</div>`);
+}
+
+T("diagnose","doc","자가진단 실행","이 브라우저에서 각 기능이 실제로 도는지 직접 검사합니다.",box=>{
+  const panel=el(`<div class="panel">
+    <p style="margin:0 0 4px">모듈 적재부터 PDF 생성·병합·렌더링·텍스트 추출·ZIP 압축까지 실제로 실행해 결과를 보여줍니다.</p>
+    <p class="hint">HEIC 변환은 검사용 파일이 없어 모듈 적재 여부만 확인합니다. 실제 변환은 아이폰 사진으로 직접 시험해 보세요.</p>
+    <div class="actions"><button class="go">검사 시작</button></div>
+    <div class="out"></div></div>`);
+  box.append(panel);
+  const go=$(".go",panel), out=$(".out",panel);
+  go.onclick=async()=>{ go.disabled=true; go.textContent="검사 중…"; await selfTest(out); go.disabled=false; go.textContent="다시 검사"; };
+});
+
+/* ===================== 화면 조립 ===================== */
+const grid=$("#grid"), gridWrap=$("#gridWrap"), work=$("#work"), q=$("#q"), catsEl=$("#cats");
+let cat="all";
+
+function renderCats(){
+  const counts={all:TOOLS.length};
+  Object.keys(CATS).forEach(k=>counts[k]=TOOLS.filter(t=>t.cat===k).length);
+  catsEl.innerHTML="";
+  [["all","전체"],...Object.entries(CATS)].forEach(([k,label])=>{
+    const b=el(`<button aria-pressed="${cat===k}">${label}<span>${counts[k]}</span></button>`);
+    b.onclick=()=>{cat=k;renderCats();renderGrid();};
+    catsEl.appendChild(b);
+  });
+}
+function renderGrid(){
+  const term=q.value.trim().toLowerCase();
+  const list=TOOLS.filter(t=>(cat==="all"||t.cat===cat) &&
+    (!term || (t.name+t.tagline+CATS[t.cat]).toLowerCase().includes(term)));
+  grid.innerHTML="";
+  if(!list.length){grid.innerHTML=`<p class="empty">찾는 도구가 없습니다. 다른 낱말로 검색해 보세요.</p>`;return;}
+  list.forEach(t=>{
+    const b=el(`<button class="tile"><i>${CATS[t.cat]}</i><b>${t.name}</b><small>${t.tagline}</small></button>`);
+    b.onclick=()=>openTool(t);
+    grid.appendChild(b);
+  });
+}
+function openTool(t){
+  gridWrap.classList.add("off"); work.classList.add("on");
+  work.innerHTML=`<button class="back">← 전체 도구</button><h2>${t.name}</h2><p class="lede">${t.tagline}</p>`;
+  work.querySelector(".back").onclick=closeTool;
+  const box=document.createElement("div"); work.appendChild(box);
+  t.build(box);
+  try{ location.hash=t.id; }catch(e){}
+  work.focus(); window.scrollTo({top:0,behavior:"instant"});
+}
+function closeTool(){
+  work.classList.remove("on"); work.innerHTML=""; gridWrap.classList.remove("off");
+  try{ if(location.hash) history.replaceState(null,"",location.pathname); }catch(e){ location.hash=""; }
+}
+q.oninput=()=>{if(work.classList.contains("on"))closeTool();renderGrid();};
+$("#home").onclick=()=>{closeTool();q.value="";cat="all";renderCats();renderGrid();};
+document.addEventListener("keydown",e=>{
+  if(e.key==="/"&&document.activeElement!==q){e.preventDefault();q.focus();}
+  if(e.key==="Escape"){if(work.classList.contains("on"))closeTool();else q.blur();}
+});
+window.addEventListener("hashchange",()=>{
+  const t=TOOLS.find(x=>x.id===location.hash.slice(1));
+  if(t&&!work.classList.contains("on"))openTool(t); else if(!location.hash)closeTool();
+});
+renderCats(); renderGrid();
+const initial=TOOLS.find(x=>x.id===location.hash.slice(1));
+if(initial) openTool(initial);
+
+</script>
+</body>
+</html>
