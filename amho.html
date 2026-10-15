@@ -1,0 +1,633 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>암호 제작소</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700;900&family=IBM+Plex+Mono:wght@600;700&display=swap">
+<style>
+/* Layout: 방탈출 지도(5개 방) → 방 안에서 4단계 스테퍼(해독 미션 → 만들기 → 테스트 → 완료). 태블릿 세로 기준 한 열, 큰 터치 버튼. 메이커 연구실 덱과 같은 남색·노랑 세계를 하나로 고정(라이트 단일 테마). */
+:root{
+  color-scheme:light;
+  --paper:#f6f4ec; --card:#ffffff; --ink:#1d2a4a; --muted:#5f6982; --line:#d9d7c8; --sunk:#ece9dc;
+  --amber:#ffd54f; --amber-deep:#b77900; --amber-soft:#fff4cf;
+  --ok:#1f8a55; --ok-soft:#e1f4e9; --bad:#c2412f; --bad-soft:#fbe5e0; --sky-soft:#e6eefc;
+  --display:'Jua','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --mono:'IBM Plex Mono','Consolas',monospace;
+}
+*{box-sizing:border-box}
+html,body{background:var(--paper);color:var(--ink)}
+body{font-family:var(--body);font-size:16px;line-height:1.55;margin:0}
+button,input{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance}
+.wrap{max-width:780px;margin:0 auto;padding-inline:16px;padding-block:0 60px}
+/* top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--ink);color:#fff;margin-inline:-16px;padding:10px 16px}
+.bar-in{max-width:780px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.logo{font-family:var(--display);font-size:1.3rem;display:flex;align-items:center;gap:8px;cursor:pointer;background:none;border:0;color:#fff;padding:0}
+.logo i{font-style:normal;background:var(--amber);color:var(--ink);border-radius:8px;width:30px;height:30px;display:grid;place-items:center;font-size:1rem}
+.bar .who{margin-left:auto;font-size:.9rem;color:#c9d1e4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.bar .bk{background:#2c3a5f;border:0;color:#fff;border-radius:999px;padding:6px 12px;font-weight:700;font-size:.85rem;cursor:pointer;white-space:nowrap}
+/* buttons */
+.btn{border:2px solid var(--ink);background:var(--card);border-radius:14px;padding:10px 18px;font-weight:700;cursor:pointer;touch-action:manipulation;min-height:48px}
+.btn.primary{background:var(--amber);border-color:var(--ink)}
+.btn.dark{background:var(--ink);color:#fff}
+.btn.ghost{border-color:var(--line);background:transparent;color:var(--muted)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn:active:not(:disabled){transform:translateY(2px)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--amber-deep);outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row.c{justify-content:center}
+.stack{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:18px;min-width:0}
+.eyebrow{font-size:.78rem;font-weight:900;letter-spacing:.06em;color:var(--amber-deep)}
+.muted{color:var(--muted)}
+.small{font-size:.86rem}
+.note{background:var(--amber-soft);border-radius:12px;padding:10px 14px;font-size:.92rem}
+.warn{background:var(--bad-soft);color:var(--bad);border-radius:12px;padding:8px 12px;font-size:.9rem;font-weight:700}
+/* home */
+.hero{padding-block:26px 8px}
+.hero h1{font-size:clamp(2rem,6vw,2.8rem);line-height:1.15}
+.hero p{margin:8px 0 0;color:var(--muted);max-width:52ch}
+.namebox{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.namebox input{flex:1;min-width:0;border:2px solid var(--ink);border-radius:14px;padding:10px 14px;font-size:1.1rem;background:var(--card)}
+.map{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:22px}
+.room{position:relative;text-align:left;background:var(--card);border:2px solid var(--ink);border-radius:18px;padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:6px;min-height:150px;touch-action:manipulation}
+.room .no{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+.room .ic{font-size:2rem;line-height:1}
+.room h3{font-size:1.35rem}
+.room p{margin:0;font-size:.88rem;color:var(--muted)}
+.room .chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:auto}
+.chip{font-size:.72rem;font-weight:900;padding:2px 8px;border-radius:999px;background:var(--sunk);color:var(--muted)}
+.chip.on{background:var(--ok-soft);color:var(--ok)}
+.room.locked{border-style:dashed;border-color:var(--line);background:var(--sunk);cursor:not-allowed}
+.room.locked>*{opacity:.45}
+.room .lock{position:absolute;top:14px;right:14px;font-size:1.4rem;opacity:1!important}
+.room.done{background:var(--ok-soft);border-color:var(--ok)}
+.room.cur{box-shadow:0 0 0 4px var(--amber)}
+.foot{margin-top:28px;display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+.teacher{margin-top:10px}
+/* station */
+.st-head{padding-block:20px 6px;display:flex;align-items:center;gap:12px}
+.st-head .ic{font-size:2.4rem}
+.st-head h2{font-size:1.9rem}
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:12px 0 16px}
+.step{border:2px solid var(--line);background:var(--card);border-radius:12px;padding:8px 6px;text-align:center;font-weight:700;font-size:.85rem;cursor:pointer;color:var(--ink);line-height:1.25;min-height:58px}
+.step b{display:block;font-family:var(--mono);font-size:.75rem;color:var(--muted)}
+.step.active{border-color:var(--ink);background:var(--amber)}
+.step.okd{border-color:var(--ok);background:var(--ok-soft)}
+.step.okd.active{background:var(--amber)}
+.step:disabled{opacity:.4;cursor:not-allowed}
+.explain{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start}
+.explain .big{font-size:2.6rem;line-height:1}
+/* rule tables */
+.rules{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.rc{display:flex;flex-direction:column;border:2px solid var(--ink);border-radius:10px;overflow:hidden;min-width:52px;text-align:center;background:var(--card)}
+.rc span{padding:6px 8px}
+.rc span+span{background:var(--amber);font-weight:900;border-top:2px solid var(--ink)}
+.rc.tap{cursor:pointer}
+.rc .emo{font-size:1.6rem;line-height:1.2}
+.code{font-family:var(--mono);font-size:clamp(1.4rem,5vw,2rem);font-weight:700;letter-spacing:.06em;text-align:center;word-break:break-word}
+.code .sep{color:var(--muted);margin:0 .4em}
+.emoline{font-size:clamp(2rem,8vw,2.8rem);text-align:center;letter-spacing:.1em;line-height:1.3}
+.dot{display:inline-grid;place-items:center;border-radius:50%;border:3px solid var(--ink);font-weight:900;color:#fff;vertical-align:middle}
+.dots{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.palette{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.palette button{border:3px solid var(--ink);border-radius:50%;width:54px;height:54px;cursor:pointer}
+/* answer */
+.ans{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center}
+.ans input{border:2px solid var(--ink);border-radius:14px;padding:10px 14px;font-size:1.25rem;min-width:0;flex:1;max-width:320px;background:var(--card)}
+.fb{width:100%;text-align:center;font-weight:700;min-height:1.6em}
+.fb.ok{color:var(--ok)} .fb.bad{color:var(--bad)}
+.shake{animation:shake .4s}
+@keyframes shake{25%,75%{transform:translateX(-8px)}50%{transform:translateX(8px)}}
+.stamp{display:inline-block;font-family:var(--display);font-size:1.6rem;color:var(--ok);border:3px solid var(--ok);border-radius:12px;padding:4px 14px;transform:rotate(-4deg);animation:pop .35s ease-out}
+@keyframes pop{from{transform:scale(1.6) rotate(-4deg);opacity:.2}to{transform:scale(1) rotate(-4deg);opacity:1}}
+/* editor */
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-weight:900;font-size:.95rem}
+.field input[type=text]{border:2px solid var(--ink);border-radius:14px;padding:10px 14px;font-size:1.15rem;background:var(--card);width:100%}
+.slider{display:flex;align-items:center;gap:12px}
+.slider input{flex:1;accent-color:#1d2a4a;min-width:0}
+.slider b{font-family:var(--mono);font-size:1.4rem;min-width:2ch;text-align:center}
+.preview{border:2px dashed var(--amber-deep);background:var(--amber-soft);border-radius:16px;padding:16px}
+.toggle{display:flex;align-items:center;gap:8px;font-weight:700;cursor:pointer}
+.toggle input{width:22px;height:22px;accent-color:#1d2a4a}
+/* scytale */
+.strip{display:flex;flex-wrap:wrap;gap:0;justify-content:center;padding:6px 0}
+.strip span{display:inline-grid;place-items:center;width:38px;height:44px;border:1.5px solid var(--ink);margin-left:-1.5px;font-weight:900;font-size:1.15rem;background:var(--card)}
+.strip span.g1{background:var(--amber-soft)} .strip span.g2{background:var(--sky-soft)}
+.gridwrap{overflow-x:auto;display:flex;justify-content:center}
+table.rod{border-collapse:collapse;margin:6px auto}
+table.rod td{width:40px;height:42px;border:2px solid var(--ink);text-align:center;font-weight:900;font-size:1.15rem;background:var(--card)}
+table.rod td.g1{background:var(--amber-soft)} table.rod td.g2{background:var(--sky-soft)}
+table.rod th{font-size:.72rem;color:var(--muted);padding-right:6px;font-weight:700;white-space:nowrap}
+/* substitution */
+.subwrap{overflow-x:auto}
+table.sub{border-collapse:collapse;margin:0 auto}
+table.sub td,table.sub th{border:1.5px solid var(--ink);min-width:30px;height:38px;text-align:center;font-weight:900;font-size:1.05rem;padding:0 2px;background:var(--card)}
+table.sub th{background:var(--ink);color:#fff;font-size:.75rem;padding:0 8px;white-space:nowrap}
+table.sub tr+tr td{background:var(--amber)}
+/* anagram */
+.tiles{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;min-height:62px}
+.tile{width:56px;height:56px;border:2px solid var(--ink);border-radius:12px;background:var(--card);font-weight:900;font-size:1.4rem;cursor:pointer;display:grid;place-items:center;touch-action:manipulation}
+.tile.used{visibility:hidden}
+.tile.slot{border-style:dashed;border-color:var(--line);background:transparent;cursor:default}
+.tile.sel{background:var(--amber)}
+.tray{background:var(--sunk);border-radius:16px;padding:10px}
+/* log */
+table.log{width:100%;border-collapse:collapse;font-size:.92rem}
+table.log th{text-align:left;font-size:.78rem;color:var(--muted);border-bottom:2px solid var(--line);padding:6px}
+table.log td{border-bottom:1px solid var(--line);padding:8px 6px}
+.handback{text-align:center;padding-block:40px}
+.handback .big{font-size:4rem}
+.book-item{display:grid;gap:10px}
+.reveal{font-family:var(--display);font-size:1.3rem}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media (max-width:560px){
+  .map{grid-template-columns:1fr}
+  .steps .step{font-size:.75rem}
+  .explain{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){.shake,.stamp{animation:none}}
+/* v2 추가 */
+.rooms{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:14px}
+.rooms button{border:2px solid var(--line);background:var(--card);border-radius:12px;padding:6px 4px;cursor:pointer;font-size:.74rem;font-weight:700;line-height:1.2;color:var(--ink);min-height:54px}
+.rooms button .e{display:block;font-size:1.2rem}
+.rooms button.cur{border-color:var(--ink);background:var(--amber)}
+.rooms button.dn{border-color:var(--ok)}
+.rooms button:disabled{opacity:.35;cursor:not-allowed}
+.banner{border-radius:14px;padding:10px 14px;font-size:.9rem;margin-top:12px}
+.banner.off{background:var(--bad-soft);color:var(--bad);font-weight:700}
+.banner.on{background:var(--ok-soft);color:var(--ok);font-weight:700}
+.banner.wait{background:var(--sunk);color:var(--muted)}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}
+.filters button{border:2px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;font-weight:700;cursor:pointer;font-size:.88rem}
+.filters button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.glist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.gcard{text-align:left;background:var(--card);border:2px solid var(--ink);border-radius:16px;padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:4px;min-width:0}
+.gcard .t{font-family:var(--display);font-size:1.25rem}
+.gcard.solved{background:var(--ok-soft);border-color:var(--ok)}
+.finish{background:var(--ok-soft);border:2px solid var(--ok);border-radius:18px;padding:18px;text-align:center}
+@media (max-width:560px){.rooms{grid-template-columns:repeat(3,minmax(0,1fr))}.glist{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+  <div class="bar"><div class="bar-in">
+    <button class="logo" id="goHome" aria-label="지도로"><i>🔐</i>암호 제작소</button>
+    <span class="who" id="who"></span>
+    <button class="bk" id="goBook">📒 수첩</button>
+  </div></div>
+  <main id="app"></main>
+</div>
+
+<script>
+/* ===================== 기본 도구 ===================== */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const rid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const isSyl=ch=>{const c=ch.charCodeAt(0);return c>=0xAC00&&c<=0xD7A3};
+function clean(s){let bad=false,out='';for(const ch of String(s||'')){if(isSyl(ch))out+=ch;else if(/\s/.test(ch))out+=' ';else bad=true}return{text:out.replace(/\s+/g,' ').trim(),bad}}
+const norm=s=>Array.from(String(s||'')).filter(ch=>isSyl(ch)||/[0-9]/.test(ch)).join('');
+const sylCount=s=>Array.from(s).filter(isSyl).length;
+let actx=null;
+function beep(f,d,type='triangle',v=.07){try{actx=actx||new(window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.type=type;o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(actx.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+d);o.stop(actx.currentTime+d)}catch(e){}}
+const yay=()=>[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.16),i*110));
+const boo=()=>beep(160,.3,'sawtooth',.05);
+
+/* 한글 자음·모음 밀기 */
+const CHO='ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'.split('');
+const JUNG='ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ'.split('');
+const JONG=['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+const B14='ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎ'.split('');
+const V10='ㅏㅑㅓㅕㅗㅛㅜㅠㅡㅣ'.split('');
+const rot=(list,x,k)=>{const i=list.indexOf(x);return i<0?x:list[((i+k)%list.length+list.length)%list.length]};
+function shiftSyl(ch,k,v){if(!isSyl(ch))return ch;const c=ch.charCodeAt(0)-0xAC00,cho=Math.floor(c/588),jung=Math.floor((c%588)/28),jong=c%28;
+  const nc=CHO.indexOf(rot(B14,CHO[cho],k)),nv=JUNG.indexOf(rot(V10,JUNG[jung],v)),nj=jong?JONG.indexOf(rot(B14,JONG[jong],k)):0;
+  return String.fromCharCode(0xAC00+nc*588+nv*28+nj)}
+const shiftText=(s,k,v=0)=>Array.from(s).map(ch=>shiftSyl(ch,k,v)).join('');
+
+/* 스키테일 */
+function scyEncode(text,n){const L=Array.from(text.replace(/\s/g,''));const cols=Math.ceil(L.length/n);while(L.length<n*cols)L.push('·');
+  let out='';for(let c=0;c<cols;c++)for(let r=0;r<n;r++)out+=L[r*cols+c];return out}
+function scyGrid(cipher,n){const L=Array.from(cipher);const cols=Math.ceil(L.length/n);const g=[];for(let r=0;r<n;r++){g.push([]);for(let c=0;c<cols;c++)g[r].push(L[c*n+r]||'')}return g}
+
+/* ===================== 5개 암호 ===================== */
+const COLORS=[{k:'빨',c:'#e53935',t:'#fff'},{k:'주',c:'#fb8c00',t:'#fff'},{k:'노',c:'#fdd835',t:'#1d2a4a'},{k:'초',c:'#43a047',t:'#fff'},{k:'파',c:'#1e88e5',t:'#fff'},{k:'보',c:'#8e24aa',t:'#fff'}];
+const colOf=k=>COLORS.find(x=>x.k===k);
+const dotHTML=(k,s=54,label='')=>{const c=colOf(k);return `<span class="dot" style="width:${s}px;height:${s}px;background:${c.c};color:${c.t}">${label}</span>`};
+const ICONS=['🍎','🐱','🌙','⭐','🚗','🌈','🎈','🐟','🌸','🔑','🎁','🦋','🍀','🐻','⚽','🍩','🚀','🎵'];
+const POOL='가나다라마바사아자차카타파하별달해숲꿈빛솔'.split('');
+function rulesHTML(pairs,opt={}){return `<div class="rules">${pairs.map(([a,b],i)=>`<div class="rc ${opt.tap?'tap':''}" ${opt.tap?`data-i="${i}" role="button" tabindex="0"`:''}><span class="${opt.emo?'emo':''}">${a}</span><span>${b}</span></div>`).join('')}</div>`}
+const numCode=d=>d.words.map(w=>w.join('-')).join(' / ');
+const picCode=d=>d.words.map(w=>w.join(' ')).join(' / ');
+const WORDS=['바나나','수박','사과','포도','딸기','호랑이','코끼리','고양이','강아지','무지개','비행기','자전거','운동장','도서관','해바라기','컴퓨터','보물 상자','비밀 열쇠','선생님','연필','지우개','김밥','떡볶이','나무','바다','구름','하늘','기차'];
+const ANAW=[['방탈출','놀이'],['호랑이','동물'],['코끼리','동물'],['아이스크림','간식'],['무지개','하늘'],['자전거','탈것'],['비행기','탈것'],['운동장','학교'],['도서관','학교'],['해바라기','꽃'],['컴퓨터','물건'],['떡볶이','음식'],['선생님','학교'],['지우개','학용품'],['강아지','동물'],['초콜릿','간식']];
+const pick=(a,n)=>shuffle(a).slice(0,n);
+const mixTiles=a=>{if(a.length<2||new Set(a).size<2)return a;let m,g=0;do{m=shuffle(a)}while(m.join('')===a.join('')&&g++<30);return m};
+const rint=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+function genNum(msg){const words=msg.split(' ').map(w=>Array.from(w));const uniq=[...new Set(words.flat())];const all=shuffle(uniq.concat(pick(POOL.filter(x=>!uniq.includes(x)),3)));
+  const num=Object.fromEntries(all.map((s,i)=>[s,i+1]));return{msg,rule:all.map((s,i)=>[i+1,s]),words:words.map(w=>w.map(s=>num[s]))}}
+function genPic(msg){const words=msg.split(' ').map(w=>Array.from(w));const uniq=[...new Set(words.flat())];const all=uniq.concat(pick(POOL.filter(x=>!uniq.includes(x)),2));
+  const ic=pick(ICONS,all.length);const map=Object.fromEntries(all.map((s,i)=>[s,ic[i]]));return{msg,rule:shuffle(all.map(s=>[map[s],s])),words:words.map(w=>w.map(s=>map[s]))}}
+function genColor(len){const d=shuffle([0,1,2,3,4,5,6,7,8,9]);const rule=Object.fromEntries(COLORS.map((c,i)=>[c.k,d[i]]));return{rule,seq:Array.from({length:len},()=>COLORS[rint(0,5)].k)}}
+/* 힌트: 순서의 1/3~1/2만 공개 */
+function partialWords(words){const n=words.flat().length;const k=Math.max(1,Math.floor(n/2));const show=new Set(pick([...Array(n).keys()],k));let x=0;return{k,n,words:words.map(w=>w.map(t=>show.has(x++)?t:'□'))}}
+function keyText(d){const p=[];if(d.k)p.push(`자음 <b>${d.k}칸</b>`);if(d.v)p.push(`모음 <b>${d.v}칸</b>`);return p.join(', ')}
+
+const C={
+ num:{title:'숫자 암호',icon:'🔢',tag:'숫자 하나 = 글자 하나',
+  intro:'글자마다 번호를 붙인 <b>규칙표</b>가 열쇠예요. 번호를 보고 규칙표에서 글자를 찾아 이어 붙여요.',
+  answer:d=>d.msg,
+  show:(d,mode)=>`<div class="eyebrow">📋 규칙표</div>${rulesHTML(d.rule)}`+(mode==='test'
+    ?`<div class="code" style="margin-top:14px;color:var(--muted)">${d.words.map(w=>w.map(()=>'□').join('-')).join('<span class="sep">/</span>')}</div><p class="small muted" style="text-align:center;margin:6px 0 0">숫자 순서는 비밀! 💡 힌트를 누르면 일부가 보여요</p>`
+    :`<div class="code" style="margin-top:14px">${d.words.map(w=>w.join('-')).join('<span class="sep">/</span>')}</div>`),
+  gen:()=>pick(WORDS,3).map(genNum)},
+ color:{title:'색 암호',icon:'🎨',tag:'색 하나 = 숫자 하나',numeric:true,
+  intro:'색깔마다 숫자가 정해져 있어요. 색을 <b>순서대로</b> 숫자로 바꾸면 비밀번호가 나와요.',
+  answer:d=>d.seq.map(k=>d.rule[k]).join(''),
+  show:d=>`<div class="eyebrow">📋 규칙표</div>${rulesHTML(COLORS.map(c=>[dotHTML(c.k,34),d.rule[c.k]]))}<div class="dots" style="margin-top:16px">${d.seq.map(k=>dotHTML(k,56)).join('')}</div>`,
+  gen:()=>[4,5,6].map(genColor)},
+ pic:{title:'그림 암호',icon:'🖼️',tag:'그림 하나 = 글자 하나',
+  intro:'그림 하나가 글자 하나를 숨기고 있어요. 규칙표에서 그림을 찾아 아래 글자로 바꿔요.',
+  answer:d=>d.msg,
+  show:(d,mode)=>`<div class="eyebrow">📋 규칙표</div>${rulesHTML(d.rule,{emo:true})}`+(mode==='test'
+    ?`<div class="code" style="margin-top:14px;color:var(--muted)">${d.words.map(w=>w.map(()=>'□').join(' ')).join('<span class="sep">/</span>')}</div><p class="small muted" style="text-align:center;margin:6px 0 0">그림 순서는 비밀! 💡 힌트를 누르면 일부가 보여요</p>`
+    :`<div class="emoline" style="margin-top:14px">${d.words.map(w=>w.join('')).join('<span style="margin:0 .4em;color:#9aa">/</span>')}</div>`),
+  gen:()=>pick(WORDS,3).map(genPic)},
+ sub:{title:'치환 암호',icon:'🔁',tag:'자음·모음을 몇 칸 밀기',
+  intro:'자음이나 모음을 정해진 칸만큼 옆으로 밀어요. 자음 1칸이면 ㄱ→ㄴ, 모음 1칸이면 ㅏ→ㅑ! 표의 <b>노란 줄</b>에서 찾아 <b>위 줄</b>로 바꾸면 원래 글자가 돌아와요. (로마의 카이사르가 쓴 방법이에요)',
+  answer:d=>d.msg,
+  show:d=>`<div class="eyebrow">✉️ 암호문</div><div class="code" style="font-family:var(--display);font-size:2.4rem;letter-spacing:.12em">${esc(shiftText(d.msg,d.k,d.v||0))}</div><p class="small muted" style="text-align:center;margin:6px 0 0">${d.showK?`힌트: ${keyText(d)} 밀었어요`:'몇 칸 밀었는지는 비밀! 표를 움직여 찾아요'}</p>`,
+  gen:()=>{const w=pick(WORDS.filter(x=>!x.includes(' ')),3);return[{msg:w[0],k:rint(1,3),v:0,showK:true},{msg:w[1],k:0,v:rint(1,2),showK:true},{msg:w[2],k:rint(1,3),v:rint(1,2),showK:true}]}},
+ ana:{title:'애너그램',icon:'🔀',tag:'글자 순서 섞기',
+  intro:'글자는 그대로, <b>순서만</b> 뒤섞었어요. 글자 카드를 알맞은 순서로 눌러 단어를 되살려요.',
+  answer:d=>d.plain,
+  show:d=>`<div class="eyebrow">🔀 섞인 글자</div><div class="tiles" style="margin-top:8px">${d.tiles.map(t=>`<span class="tile" style="cursor:default">${esc(t)}</span>`).join('')}</div>${d.hint?`<p class="small muted" style="text-align:center;margin:8px 0 0">💡 힌트: ${esc(d.hint)}</p>`:''}`,
+  gen:()=>pick(ANAW,3).map(([w,h])=>({plain:w,tiles:mixTiles(Array.from(w)),hint:h}))}
+};
+const IDS=['num','color','pic','sub','ana'];
+
+function stripHTML(cipher,n){const L=Array.from(cipher);return `<div class="strip">${L.map((ch,i)=>`<span class="${n?(Math.floor(i/n)%2?'g2':'g1'):''}">${esc(ch)}</span>`).join('')}</div>`}
+function rodHTML(cipher,n){const g=scyGrid(cipher,n);return `<div class="gridwrap"><table class="rod">${g.map((row,r)=>`<tr><th>${r+1}줄</th>${row.map((ch,c)=>`<td class="${c%2?'g2':'g1'}">${esc(ch)}</td>`).join('')}</tr>`).join('')}</table></div>`}
+const tableHTML=(list,k,label)=>`<div class="subwrap"><table class="sub"><tr><th>원래 ${label}</th>${list.map(c=>`<td>${c}</td>`).join('')}</tr><tr><th>${k}칸 밀기</th>${list.map(c=>`<td>${rot(list,c,k)}</td>`).join('')}</tr></table></div>`;
+const subTables=(k,v)=>`<div class="stack" style="gap:8px">${k?tableHTML(B14,k,'자음'):''}${v?tableHTML(V10,v,'모음'):''}</div>`;
+
+/* ===================== 상태 (이 컴퓨터) ===================== */
+const KEY='cipher-lab-v3';
+const fresh=()=>({uid:rid('u'),name:'',free:false,view:'home',sid:null,tab:'learn',st:Object.fromEntries(IDS.map(id=>[id,{learn:false,data:null,ver:0,log:[],done:false,cid:null}]))});
+let S=fresh();
+try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&s.st&&IDS.every(id=>s.st[id]))S=Object.assign(fresh(),s)}catch(e){}
+if(S.view==='solve'||S.view==='handback'){S.view=S.sid?'station':'home';S.tab='test'}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const canOpen=i=>S.free||i===0||S.st[IDS[i-1]].done;
+let solveCtx=null,learnIdx=0,handName='';
+
+/* ===================== 테스트 기록 (이 컴퓨터) ===================== */
+const resultsOf=id=>{const st=S.st[id];return st.log.filter(r=>r.ver!==undefined).slice().sort((a,b)=>(a.at||0)-(b.at||0))};
+const tested=id=>{const st=S.st[id];return !!st.data&&resultsOf(id).some(r=>r.ok&&r.ver===st.ver)};
+
+/* ===================== 정답 입력 위젯 ===================== */
+function answerBox(host,{answer,numeric,onOk,onWrong}){
+  const w=document.createElement('div');w.className='ans';
+  const id='a'+Math.random().toString(36).slice(2,8);
+  w.innerHTML=`<input id="${id}" type="text" ${numeric?'inputmode="numeric"':''} autocomplete="off" placeholder="${numeric?'숫자를 넣어요':'답을 써요'}" aria-label="정답"><button class="btn primary">확인</button><div class="fb" aria-live="polite"></div>`;
+  host.appendChild(w);
+  const inp=w.querySelector('input'),fb=w.querySelector('.fb');let done=false;
+  const check=()=>{if(done)return;const v=norm(inp.value);if(!v){fb.className='fb bad';fb.textContent='답을 먼저 써 주세요';return}
+    if(v===norm(answer)){done=true;fb.className='fb ok';fb.innerHTML='<span class="stamp">해독 성공!</span>';yay();inp.disabled=true;w.querySelector('button').disabled=true;onOk&&onOk()}
+    else{fb.className='fb bad';fb.textContent='아직이에요! 규칙을 다시 살펴봐요';w.classList.remove('shake');void w.offsetWidth;w.classList.add('shake');boo();onWrong&&onWrong()}};
+  w.querySelector('button').onclick=check;
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();check()}});
+  return w;
+}
+
+/* ===================== 해독기 ===================== */
+function solver(host,id,d,{mode,onOk,onWrong}){
+  const c=C[id];host.innerHTML='';
+  const box=document.createElement('div');box.className='stack';host.appendChild(box);
+  if(id==='ana')return anaSolver(box,d,{onOk,onWrong});
+  const top=document.createElement('div');top.className='card';top.innerHTML=c.show(d,mode);box.appendChild(top);
+  if(id==='scy'){
+    const tool=document.createElement('div');tool.className='card';
+    tool.innerHTML=`<div class="eyebrow">🪵 막대에 감아 보기</div><div class="slider" style="margin:8px 0"><span class="small">막대 굵기</span><input type="range" min="2" max="6" value="2" id="scyN" aria-label="막대 굵기"><b id="scyNv">2</b><span class="small">줄</span></div><div id="scyRod"></div><p class="small muted" style="margin:6px 0 0">줄마다 왼쪽에서 오른쪽으로 읽어 봐요. 말이 되면 그 굵기가 정답!</p>`;
+    box.appendChild(tool);const cipher=scyEncode(d.msg,d.n);
+    const draw=n=>{tool.querySelector('#scyNv').textContent=n;tool.querySelector('#scyRod').innerHTML=rodHTML(cipher,n);top.querySelector('.strip').outerHTML=stripHTML(cipher,n)};
+    tool.querySelector('#scyN').oninput=e=>draw(+e.target.value);draw(2);
+  }
+  if(id==='sub'){
+    const tool=document.createElement('div');tool.className='card';
+    if(d.showK){tool.innerHTML=`<div class="eyebrow">🔁 바꾸기 표</div>${subTables(d.k,d.v||0)}<p class="small muted" style="margin:8px 0 0">노란 줄에서 찾아 위 줄로 바꿔요. 표에 없는 글자는 그대로예요.</p>`}
+    else{tool.innerHTML=`<div class="eyebrow">🔁 표를 움직여 맞춰 보기</div>
+      <div class="slider" style="margin:8px 0"><span class="small">자음</span><input type="range" min="0" max="13" value="1" id="subK" aria-label="자음 몇 칸"><b id="subKv">1</b><span class="small">칸</span></div>
+      <div class="slider" style="margin:8px 0"><span class="small">모음</span><input type="range" min="0" max="9" value="0" id="subV" aria-label="모음 몇 칸"><b id="subVv">0</b><span class="small">칸</span></div><div id="subT"></div>`;
+      const draw=()=>{const k=+tool.querySelector('#subK').value,v=+tool.querySelector('#subV').value;tool.querySelector('#subKv').textContent=k;tool.querySelector('#subVv').textContent=v;tool.querySelector('#subT').innerHTML=`<div class="stack" style="gap:8px">${tableHTML(B14,k,'자음')}${tableHTML(V10,v,'모음')}</div>`};
+      tool.querySelector('#subK').oninput=draw;tool.querySelector('#subV').oninput=draw;draw()}
+    box.appendChild(tool);
+  }
+  const a=document.createElement('div');a.className='card';box.appendChild(a);
+  answerBox(a,{answer:c.answer(d),numeric:c.numeric,onOk,onWrong});
+}
+function anaSolver(box,d,{onOk,onWrong}){
+  const card=document.createElement('div');card.className='card stack';box.appendChild(card);
+  let placed=[],locked=false;
+  const draw=()=>{
+    card.innerHTML=`<div class="eyebrow">🔀 글자 카드를 순서대로 눌러요</div>
+    <div class="tiles">${d.tiles.map((_,i)=>placed[i]!==undefined?`<button class="tile" data-p="${i}">${esc(d.tiles[placed[i]])}</button>`:`<span class="tile slot"></span>`).join('')}</div>
+    <div class="tray"><div class="tiles">${d.tiles.map((t,i)=>`<button class="tile ${placed.includes(i)?'used':''}" data-t="${i}" ${placed.includes(i)?'tabindex="-1"':''}>${esc(t)}</button>`).join('')}</div></div>
+    ${d.hint?`<p class="small muted" style="margin:0;text-align:center">💡 힌트: ${esc(d.hint)}</p>`:''}
+    <div class="row c"><button class="btn ghost" id="anaReset">다시 놓기</button></div><div class="fb" id="anaFb" aria-live="polite"></div>`;
+    card.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{if(locked)return;const i=+b.dataset.t;if(placed.includes(i))return;placed.push(i);beep(620,.05);draw();if(placed.length===d.tiles.length)check()});
+    card.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{if(locked)return;placed.splice(+b.dataset.p,1);draw()});
+    card.querySelector('#anaReset').onclick=()=>{if(locked)return;placed=[];draw()};
+  };
+  const check=()=>{const fb=card.querySelector('#anaFb');const word=placed.map(i=>d.tiles[i]).join('');
+    if(norm(word)===norm(d.plain)){locked=true;fb.className='fb ok';fb.innerHTML='<span class="stamp">해독 성공!</span>';yay();onOk&&onOk()}
+    else{fb.className='fb bad';fb.textContent='아직이에요! 카드를 눌러 빼고 다시 놓아 봐요';card.classList.remove('shake');void card.offsetWidth;card.classList.add('shake');boo();onWrong&&onWrong()}};
+  draw();
+}
+
+/* ===================== 만들기 ===================== */
+function editor(host,id,prev,onSave){
+  const E={num:edNum,color:edColor,pic:edPic,scy:edScy,sub:edSub,ana:edAna}[id];
+  host.innerHTML='';E(host,prev?JSON.parse(JSON.stringify(prev)):null,onSave);
+}
+function shell(host,fields,{onPreview,onSave,hint}){
+  host.innerHTML=`<div class="stack"><div class="card stack">${fields}
+   <div class="field"><label for="edHint">💡 힌트 <span class="small muted">(선택) 친구가 막히면 보여 줄 말</span></label><input type="text" id="edHint" maxlength="30" value="${esc(hint||'')}" placeholder="예: 우리 교실에 있는 물건"></div></div>
+   <div class="preview"><div class="eyebrow" style="margin-bottom:8px">👀 친구 화면 미리보기 (정답은 안 보여요)</div><div id="edPrev"></div></div>
+   <div id="edMsg"></div><div class="row c"><button class="btn primary" id="edSave">💾 저장하고 테스트하기</button></div></div>`;
+  const msg=host.querySelector('#edMsg');
+  const refresh=()=>{const r=onPreview();host.querySelector('#edPrev').innerHTML=r.html;msg.innerHTML=r.warn?`<div class="warn">${r.warn}</div>`:'';host.querySelector('#edSave').disabled=!r.ok};
+  host.querySelector('#edSave').onclick=()=>{const r=onPreview();if(!r.ok)return;r.data.hint=host.querySelector('#edHint').value.trim();onSave(r.data)};
+  return refresh;
+}
+function msgField(val,ph,max){return `<div class="field"><label for="edMsg1">🔒 숨길 말 <span class="small muted">(한글 ${max}글자까지)</span></label><input type="text" id="edMsg1" value="${esc(val||'')}" placeholder="${ph}" autocomplete="off"></div>`}
+const badWarn='한글 글자만 쓸 수 있어요 (ㄱ, ㅏ 같은 낱자나 숫자·기호는 빠져요)';
+
+function edNum(host,p,save){
+  let decoys=p?p.decoys||[]:[],keyMap=p?p.keyMap||{}:{},shuffled=p?!!p.shuffled:true;
+  const build=()=>{const t=clean(host.querySelector('#edMsg1').value);const words=t.text?t.text.split(' ').map(w=>Array.from(w)):[];
+    const uniq=[...new Set(words.flat())];decoys=decoys.filter(x=>!uniq.includes(x));let all=uniq.concat(decoys);
+    if(shuffled){all.forEach(s=>{if(keyMap[s]==null)keyMap[s]=Math.random()});all=all.slice().sort((a,b)=>keyMap[a]-keyMap[b])}
+    const num=Object.fromEntries(all.map((s,i)=>[s,i+1]));const n=sylCount(t.text);
+    const data={msg:t.text,rule:all.map((s,i)=>[i+1,s]),words:words.map(w=>w.map(s=>num[s])),decoys,keyMap,shuffled};
+    let warn='';if(t.bad)warn=badWarn;if(n<2)warn=warn||'두 글자 이상 써 주세요';if(n>12)warn='12글자까지만 쓸 수 있어요';
+    return{ok:n>=2&&n<=12,warn,data,html:n?C.num.show(data,'test')+`<p class="small" style="text-align:center;margin:8px 0 0">🔢 전체 숫자 순서: <b>${numCode(data)}</b><br><span class="muted">친구가 힌트를 누르면 이 중 절반 정도만 보여요</span></p>`:'<p class="muted" style="text-align:center">숨길 말을 쓰면 규칙표가 생겨요</p>'}};
+  const refresh=shell(host,msgField(p&&p.msg,'예: 보물 상자',12)+`<div class="field"><label>🔢 규칙표 꾸미기</label><div class="row"><button class="btn" id="nShuf">🔀 번호 섞기</button><button class="btn" id="nDec">➕ 가짜 글자</button><button class="btn ghost" id="nDecR">➖ 가짜 빼기</button></div><span class="small muted">친구는 규칙표만 보고 먼저 짐작해요. 숫자 순서는 힌트를 눌러야 보여요. 가짜 글자를 넣으면 짐작하기 어려워져요.</span></div>`,{onPreview:build,onSave:save,hint:p&&p.hint});
+  host.querySelector('#edMsg1').oninput=refresh;
+  host.querySelector('#nShuf').onclick=()=>{shuffled=true;keyMap={};refresh()};
+  host.querySelector('#nDec').onclick=()=>{const used=new Set([...Array.from(host.querySelector('#edMsg1').value),...decoys]);const c=shuffle(POOL).find(x=>!used.has(x));if(c&&decoys.length<6){decoys.push(c);refresh()}};
+  host.querySelector('#nDecR').onclick=()=>{decoys.pop();refresh()};
+  refresh();
+}
+function edColor(host,p,save){
+  let rule=p?p.rule:(()=>{const d=shuffle([0,1,2,3,4,5,6,7,8,9]);return Object.fromEntries(COLORS.map((c,i)=>[c.k,d[i]]))})();let seq=p?p.seq.slice():[];
+  const build=()=>{const data={rule,seq};return{ok:seq.length>=3,warn:seq.length<3?'색을 3개 이상 골라 주세요':'',data,html:C.color.show(data)}};
+  const refresh=shell(host,`<div class="field"><label>📋 규칙표 정하기 <span class="small muted">색을 누를 때마다 숫자가 바뀌어요</span></label><div id="cRule"></div><div class="row c"><button class="btn ghost" id="cShuf">🔀 숫자 섞기</button></div></div>
+   <div class="field"><label>🎨 비밀번호 색칠하기 <span class="small muted">색을 순서대로 눌러요 (3~8개)</span></label><div class="palette" id="cPal">${COLORS.map(c=>`<button style="background:${c.c}" data-k="${c.k}" aria-label="${c.k}"></button>`).join('')}</div>
+   <div class="dots" id="cSeq" style="min-height:56px"></div><div class="row c"><button class="btn ghost" id="cBack">⌫ 하나 지우기</button><button class="btn ghost" id="cClr">모두 지우기</button></div></div>`,{onPreview:build,onSave:save,hint:p&&p.hint});
+  const drawRule=()=>{const h=host.querySelector('#cRule');h.innerHTML=rulesHTML(COLORS.map(c=>[dotHTML(c.k,34),rule[c.k]]),{tap:true});
+    h.querySelectorAll('[data-i]').forEach(el=>{const go=()=>{const k=COLORS[+el.dataset.i].k;rule[k]=(rule[k]+1)%10;beep(520,.05);drawRule();refresh()};el.onclick=go;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}}})};
+  const drawSeq=()=>{host.querySelector('#cSeq').innerHTML=seq.map(k=>dotHTML(k,46)).join('')||'<span class="muted small">아직 고른 색이 없어요</span>'};
+  host.querySelectorAll('#cPal button').forEach(b=>b.onclick=()=>{if(seq.length<8){seq.push(b.dataset.k);beep(660,.05);drawSeq();refresh()}});
+  host.querySelector('#cBack').onclick=()=>{seq.pop();drawSeq();refresh()};
+  host.querySelector('#cClr').onclick=()=>{seq=[];drawSeq();refresh()};
+  host.querySelector('#cShuf').onclick=()=>{const d=shuffle([0,1,2,3,4,5,6,7,8,9]);COLORS.forEach((c,i)=>rule[c.k]=d[i]);drawRule();refresh()};
+  drawRule();drawSeq();refresh();
+}
+function edPic(host,p,save){
+  let decoys=p?p.decoys||[]:[],iconMap=p?p.iconMap||{}:{};
+  const build=()=>{const t=clean(host.querySelector('#edMsg1').value);const words=t.text?t.text.split(' ').map(w=>Array.from(w)):[];
+    const uniq=[...new Set(words.flat())];decoys=decoys.filter(x=>!uniq.includes(x));const all=uniq.concat(decoys);
+    const taken=new Set();all.forEach(s=>{if(!iconMap[s]||taken.has(iconMap[s]))iconMap[s]=shuffle(ICONS).find(x=>!taken.has(x)&&!all.some(o=>o!==s&&iconMap[o]===x));taken.add(iconMap[s])});
+    const n=sylCount(t.text);
+    const rule=all.map(s=>[iconMap[s],s]).sort((a,b)=>ICONS.indexOf(a[0])-ICONS.indexOf(b[0]));
+    const data={msg:t.text,rule,words:words.map(w=>w.map(s=>iconMap[s])),decoys,iconMap};
+    let warn='';if(t.bad)warn=badWarn;if(n<2)warn=warn||'두 글자 이상 써 주세요';if(n>12)warn='12글자까지만 쓸 수 있어요';
+    return{ok:n>=2&&n<=12,warn,data,html:n?C.pic.show(data,'test')+`<p class="small" style="text-align:center;margin:8px 0 0">🖼️ 전체 그림 순서: <b>${picCode(data)}</b><br><span class="muted">친구가 힌트를 누르면 이 중 절반 정도만 보여요</span></p>`:'<p class="muted" style="text-align:center">숨길 말을 쓰면 그림 규칙표가 생겨요</p>'}};
+  const refresh0=shell(host,msgField(p&&p.msg,'예: 사물함 열쇠',12)+`<div class="field"><label>🖼️ 그림 바꾸기 <span class="small muted">그림을 누르면 다른 그림으로 바뀌어요</span></label><div id="pRule"></div><div class="row"><button class="btn" id="pDec">➕ 가짜 글자</button><button class="btn ghost" id="pDecR">➖ 가짜 빼기</button></div></div>`,{onPreview:build,onSave:save,hint:p&&p.hint});
+  const refresh=()=>{refresh0();const r=build();const all=r.data.rule.map(x=>x[1]);const h=host.querySelector('#pRule');
+    h.innerHTML=all.length?rulesHTML(r.data.rule,{tap:true,emo:true}):'';
+    h.querySelectorAll('[data-i]').forEach(el=>{const go=()=>{const s=r.data.rule[+el.dataset.i][1];const used=all.map(o=>iconMap[o]);const cur=ICONS.indexOf(iconMap[s]);
+      for(let j=1;j<=ICONS.length;j++){const cand=ICONS[(cur+j)%ICONS.length];if(!used.includes(cand)){iconMap[s]=cand;break}}beep(520,.05);refresh()};el.onclick=go;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}}})};
+  host.querySelector('#edMsg1').oninput=refresh;
+  host.querySelector('#pDec').onclick=()=>{const used=new Set([...Array.from(host.querySelector('#edMsg1').value),...decoys]);const c=shuffle(POOL).find(x=>!used.has(x));if(c&&decoys.length<5){decoys.push(c);refresh()}};
+  host.querySelector('#pDecR').onclick=()=>{decoys.pop();refresh()};
+  refresh();
+}
+function edScy(host,p,save){
+  let n=p?p.n:3,showN=p?p.showN:true;
+  const build=()=>{const t=clean(host.querySelector('#edMsg1').value);const msg=t.text.replace(/\s/g,'');const len=msg.length;
+    const data={msg,n,showN};let warn='';if(t.bad)warn=badWarn;if(len<4)warn=warn||'네 글자 이상 써 주세요';if(len>20)warn='20글자까지만 쓸 수 있어요';if(len>=4&&n>=len)warn='막대 굵기가 글자 수보다 작아야 섞여요';
+    host.querySelector('#sGrid').innerHTML=len?`<div class="eyebrow">✏️ 막대에 쓴 모습 (가로로 읽으면 원래 말)</div>${rodHTML(scyEncode(msg,n),n)}`:'';
+    return{ok:len>=4&&len<=20&&n<len,warn,data,html:len?C.scy.show(data):'<p class="muted" style="text-align:center">숨길 말을 쓰면 띠가 생겨요</p>'}};
+  const refresh=shell(host,msgField(p&&p.msg,'예: 신발장아래를보세요',20)+`<p class="small muted" style="margin:-4px 0 0">띄어쓰기는 자동으로 빠져요. 남는 칸은 · 로 채워져요.</p>
+   <div class="field"><label>🪵 막대 굵기 (몇 줄로 감을까?)</label><div class="slider"><input type="range" min="2" max="6" value="${n}" id="sN" aria-label="막대 굵기"><b id="sNv">${n}</b><span class="small">줄</span></div></div>
+   <div id="sGrid"></div><label class="toggle"><input type="checkbox" id="sShow" ${showN?'checked':''}>친구에게 막대 굵기 알려 주기 (끄면 더 어려워요)</label>`,{onPreview:build,onSave:save,hint:p&&p.hint});
+  host.querySelector('#edMsg1').oninput=refresh;
+  host.querySelector('#sN').oninput=e=>{n=+e.target.value;host.querySelector('#sNv').textContent=n;refresh()};
+  host.querySelector('#sShow').onchange=e=>{showN=e.target.checked;refresh()};
+  refresh();
+}
+function edSub(host,p,save){
+  let k=p?p.k:2,v=p?(p.v||0):1,showK=p?p.showK:true;
+  const build=()=>{const t=clean(host.querySelector('#edMsg1').value);const len=sylCount(t.text);const data={msg:t.text,k,v,showK};
+    let warn='';if(t.bad)warn=badWarn;if(len<2)warn=warn||'두 글자 이상 써 주세요';if(len>12)warn='12글자까지만 쓸 수 있어요';if(!k&&!v)warn='자음이나 모음 중 하나는 1칸 이상 밀어야 해요';
+    host.querySelector('#uTab').innerHTML=`<div class="stack" style="gap:8px">${tableHTML(B14,k,'자음')}${tableHTML(V10,v,'모음')}</div>`;
+    return{ok:len>=2&&len<=12&&(k||v),warn,data,html:len?C.sub.show(data):'<p class="muted" style="text-align:center">숨길 말을 쓰면 암호문이 생겨요</p>'}};
+  const refresh=shell(host,msgField(p&&p.msg,'예: 내일 운동장',12)+`
+   <div class="field"><label>🔁 자음을 몇 칸 밀까?</label><div class="slider"><input type="range" min="0" max="13" value="${k}" id="uK" aria-label="자음 몇 칸"><b id="uKv">${k}</b><span class="small">칸</span></div></div>
+   <div class="field"><label>🔁 모음을 몇 칸 밀까? <span class="small muted">ㅏㅑㅓㅕㅗㅛㅜㅠㅡㅣ 순서</span></label><div class="slider"><input type="range" min="0" max="9" value="${v}" id="uV" aria-label="모음 몇 칸"><b id="uVv">${v}</b><span class="small">칸</span></div></div>
+   <div id="uTab"></div><label class="toggle"><input type="checkbox" id="uShow" ${showK?'checked':''}>친구에게 몇 칸인지 알려 주기 (끄면 더 어려워요)</label>`,{onPreview:build,onSave:save,hint:p&&p.hint});
+  host.querySelector('#edMsg1').oninput=refresh;
+  host.querySelector('#uK').oninput=e=>{k=+e.target.value;host.querySelector('#uKv').textContent=k;refresh()};
+  host.querySelector('#uV').oninput=e=>{v=+e.target.value;host.querySelector('#uVv').textContent=v;refresh()};
+  host.querySelector('#uShow').onchange=e=>{showK=e.target.checked;refresh()};
+  refresh();
+}
+function edAna(host,p,save){
+  let tiles=p?p.tiles.slice():[],sel=null,lastPlain=p?p.plain:'';
+  const mix=a=>{if(a.length<2||new Set(a).size<2)return a;let m,g=0;do{m=shuffle(a)}while(m.join('')===a.join('')&&g++<30);return m};
+  const build=()=>{const t=clean(host.querySelector('#edMsg1').value);const plain=t.text.replace(/\s/g,'');
+    if(plain!==lastPlain){tiles=mix(Array.from(plain));lastPlain=plain;sel=null}
+    const len=plain.length;const data={plain,tiles};let warn='';if(t.bad)warn=badWarn;if(len<2)warn=warn||'두 글자 이상 써 주세요';if(len>10)warn='10글자까지만 쓸 수 있어요';
+    const same=len>=2&&tiles.join('')===plain;if(same)warn='아직 원래 순서 그대로예요. 섞어 주세요!';
+    drawTiles();
+    return{ok:len>=2&&len<=10&&!same,warn,data,html:len?C.ana.show({...data,hint:host.querySelector('#edHint')?.value||''}):'<p class="muted" style="text-align:center">숨길 말을 쓰면 글자 카드가 생겨요</p>'}};
+  const drawTiles=()=>{const h=host.querySelector('#aTiles');if(!h)return;h.innerHTML=tiles.map((t,i)=>`<button class="tile ${sel===i?'sel':''}" data-i="${i}">${esc(t)}</button>`).join('');
+    h.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;if(sel===null){sel=i;drawTiles()}else{[tiles[sel],tiles[i]]=[tiles[i],tiles[sel]];sel=null;beep(600,.05);refresh()}})};
+  const refresh=shell(host,msgField(p&&p.plain,'예: 무지개',10)+`<div class="field"><label>🔀 섞기 <span class="small muted">카드 두 장을 차례로 누르면 자리가 바뀌어요</span></label><div class="tiles" id="aTiles"></div><div class="row c"><button class="btn" id="aMix">🎲 자동으로 섞기</button></div></div>
+   <p class="small muted" style="margin:0">💡 애너그램은 힌트가 있으면 훨씬 재밌어요. 예: "과일", "우리 반 친구 이름"</p>`,{onPreview:build,onSave:save,hint:p&&p.hint});
+  host.querySelector('#edMsg1').oninput=refresh;
+  host.querySelector('#edHint').addEventListener('input',refresh);
+  host.querySelector('#aMix').onclick=()=>{tiles=mix(Array.from(lastPlain));sel=null;refresh()};
+  refresh();
+}
+
+/* ===================== 화면 ===================== */
+function render(){
+  save();
+  $('#who').textContent=S.name?`🕵️ ${S.name} 연구원`:'';
+  const app=$('#app');
+  ({station,solve:solveView,handback,book,home})[S.view in {station:1,solve:1,handback:1,book:1}?S.view:'home'](app);
+}
+function go(view,extra={}){Object.assign(S,{view},extra);render();scrollTo(0,0)}
+function openStation(id){const st=S.st[id];learnIdx=0;go('station',{sid:id,tab:st.done?'done':!st.learn?'learn':!st.data?'make':!tested(id)?'test':'done'})}
+const allDone=()=>IDS.every(id=>S.st[id].done);
+
+function resetBlock(){return `<div class="card stack" id="rstCard"><div class="eyebrow">🔄 다음 사람이 쓰기</div>
+  <p class="small" style="margin:0">이 컴퓨터의 이름, 진행 기록, 만든 암호를 모두 지우고 처음부터 시작해요.</p>
+  <div class="confirm" id="rstBox"><button class="btn" id="rst">🔄 사용자 초기화</button></div></div>`}
+function bindReset(app){const b=app.querySelector('#rst');if(!b)return;b.onclick=()=>{const box=app.querySelector('#rstBox');
+  box.innerHTML='<span class="warn">정말 초기화할까요?</span><button class="btn dark" id="rstY">초기화</button><button class="btn" id="rstN">취소</button>';
+  box.querySelector('#rstY').onclick=()=>{
+    const free=S.free;S=fresh();S.free=free;solveCtx=null;go('home')};
+  box.querySelector('#rstN').onclick=()=>render()}}
+
+function home(app){
+  const doneN=IDS.filter(id=>S.st[id].done).length;
+  const curI=IDS.findIndex((id,i)=>canOpen(i)&&!S.st[id].done);
+  app.innerHTML=`<section class="hero"><div class="eyebrow">메이커 연구실 · 5개의 암호 방</div><h1>암호를 풀고, 만들고,<br>친구에게 시험해 봐요</h1>
+   <p>방마다 <b>① 해독 미션 3개 → ② 내 암호 만들기 → ③ 친구가 이 컴퓨터로 와서 풀기 → ④ 고치거나 완료</b>. 방을 끝내야 다음 방 문이 열려요. (${doneN}/${IDS.length} 완료)</p>
+   <form class="namebox" id="nameF"><input id="nameIn" type="text" maxlength="10" placeholder="연구원 이름을 써요" value="${esc(S.name)}" aria-label="이름"><button class="btn dark" type="submit">${S.name?'이름 바꾸기':'등록'}</button></form></section>
+   ${allDone()?`<div class="finish" style="margin-top:18px"><h2 style="font-size:1.6rem">🎉 5개 방을 모두 완료했어요!</h2><p style="margin:6px 0 0">친구 자리로 가서 친구 암호를 풀어 보거나, 다음 사람을 위해 아래에서 초기화해 주세요.</p></div>`:''}
+   <section class="map">${IDS.map((id,i)=>{const st=S.st[id],c=C[id],open=canOpen(i);
+     return `<button class="room ${open?'':'locked'} ${st.done?'done':''} ${i===curI?'cur':''}" data-i="${i}" ${open?'':'aria-disabled="true"'}>
+      ${open?'':'<span class="lock" aria-hidden="true">🔒</span>'}<span class="no">방 ${i+1}</span><span class="ic">${c.icon}</span><h3>${c.title}</h3><p>${c.tag}</p>
+      <span class="chips"><span class="chip ${st.learn?'on':''}">해독</span><span class="chip ${st.data?'on':''}">제작</span><span class="chip ${tested(id)?'on':''}">테스트</span><span class="chip ${st.done?'on':''}">완료</span></span></button>`}).join('')}</section>
+   <div class="foot"><button class="btn" id="toBook">📒 내 암호 수첩</button><button class="btn ghost" id="tBtn">🔑 선생님</button></div>
+   <div class="teacher card" id="tPanel" hidden><div class="stack">
+     <div class="row"><input id="tCode" type="text" inputmode="numeric" placeholder="선생님 비밀번호" style="border:2px solid var(--ink);border-radius:12px;padding:8px 12px;flex:1;min-width:0" aria-label="선생님 비밀번호"><button class="btn dark" id="tGo">확인</button></div>
+     <p class="small muted" style="margin:0" id="tMsg">${S.free?'지금은 <b>모든 방이 열려</b> 있어요. 비밀번호를 다시 넣으면 순서대로 잠겨요.':'비밀번호를 넣으면 모든 방을 자유롭게 열 수 있어요.'}</p>
+     <div id="tMore"></div></div></div>
+   <div style="margin-top:22px">${resetBlock()}</div>`;
+  app.querySelector('#nameF').onsubmit=e=>{e.preventDefault();const v=app.querySelector('#nameIn').value.trim().slice(0,10);if(!v)return;S.name=v;render()};
+  app.querySelectorAll('.room').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;if(!canOpen(i)){boo();return}
+    if(!S.name){needName(app);return}openStation(IDS[i])});
+  app.querySelector('#toBook').onclick=()=>go('book');
+  app.querySelector('#tBtn').onclick=()=>{const p=app.querySelector('#tPanel');p.hidden=!p.hidden};
+  app.querySelector('#tGo').onclick=()=>{if(app.querySelector('#tCode').value.trim()!=='3142'){app.querySelector('#tMsg').textContent='비밀번호가 달라요.';return}
+    const m=app.querySelector('#tMore');
+    m.innerHTML=`<div class="row"><button class="btn" id="tFree">${S.free?'🔒 방 순서대로 잠그기':'🔓 모든 방 열기'}</button></div>`;
+    m.querySelector('#tFree').onclick=()=>{S.free=!S.free;render()};
+};
+  bindReset(app);
+}
+function needName(app){const f=app.querySelector('#nameF');app.querySelector('#nameIn').focus();f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake')}
+
+function roomNav(cur){return `<nav class="rooms" aria-label="암호 방 이동">${IDS.map((id,i)=>`<button data-go="${id}" class="${id===cur?'cur':''} ${S.st[id].done?'dn':''}" ${canOpen(i)?'':'disabled'}><span class="e">${canOpen(i)?C[id].icon:'🔒'}</span>${C[id].title}</button>`).join('')}</nav>`}
+function bindRoomNav(app){app.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>openStation(b.dataset.go))}
+
+function station(app){
+  const id=S.sid,c=C[id],st=S.st[id],i=IDS.indexOf(id);
+  const steps=[['learn','해독 미션',st.learn,true],['make',st.data?'고치기':'만들기',!!st.data,st.learn||S.free],['test','친구 테스트',tested(id),!!st.data],['done','완료',st.done,tested(id)||st.done]];
+  app.innerHTML=`${roomNav(id)}<div class="st-head"><span class="ic">${c.icon}</span><div><div class="eyebrow">방 ${i+1} / ${IDS.length}</div><h2>${c.title}</h2></div></div>
+   <nav class="steps" aria-label="단계">${steps.map(([k,l,ok,en],j)=>`<button class="step ${S.tab===k?'active':''} ${ok?'okd':''}" data-k="${k}" ${en?'':'disabled'}><b>${ok?'✓':j+1}</b>${l}</button>`).join('')}</nav>
+   <div id="pane"></div>`;
+  bindRoomNav(app);
+  app.querySelectorAll('.step').forEach(b=>b.onclick=()=>{S.tab=b.dataset.k;learnIdx=0;render()});
+  ({learn:tabLearn,make:tabMake,test:tabTest,done:tabDone})[S.tab](app.querySelector('#pane'),id,st);
+}
+function tabLearn(pane,id,st){
+  const c=C[id];if(!Array.isArray(st.learnSet)||st.learnSet.length!==3){st.learnSet=c.gen();save()}const list=st.learnSet;if(learnIdx>=list.length)learnIdx=0;
+  pane.innerHTML=`<div class="stack"><div class="card explain"><span class="big">${c.icon}</span><div><div class="eyebrow">이렇게 숨겨요</div><p style="margin:4px 0 0">${c.intro}</p></div></div>
+   <div class="row" style="justify-content:space-between"><b>🕵️ 해독 미션 ${learnIdx+1} / ${list.length}</b><span class="row" style="gap:4px">${list.map((_,j)=>`<span class="chip ${j<learnIdx||st.learn?'on':''}">${j+1}</span>`).join('')}</span></div><div id="lv"></div><div id="lnext"></div></div>`;
+  solver(pane.querySelector('#lv'),id,list[learnIdx],{mode:'learn',onOk:()=>{const nx=pane.querySelector('#lnext');
+    if(learnIdx<list.length-1){nx.innerHTML='<div class="row c"><button class="btn primary">다음 미션 →</button></div>';nx.querySelector('button').onclick=()=>{learnIdx++;render()}}
+    else{st.learn=true;save();nx.innerHTML=`<div class="card" style="text-align:center"><p style="margin:0 0 10px"><b>미션 3개 성공!</b> 이제 나만의 ${c.title}를 만들어 볼까요?</p><button class="btn primary">✏️ 만들러 가기 →</button></div>`;
+      nx.querySelector('button').onclick=()=>{S.tab='make';render()}}}});
+}
+function tabMake(pane,id,st){
+  if(!st.learn&&!S.free){pane.innerHTML='<div class="note">먼저 해독 미션을 풀어요.</div>';return}
+  pane.innerHTML=`${st.data?`<div class="note" style="margin-bottom:14px">✏️ <b>고치는 중</b>이에요. 저장하면 새 버전이 되고, <b>다시 테스트</b>를 통과해야 완료할 수 있어요.</div>`:''}<div id="ed"></div>`;
+  editor(pane.querySelector('#ed'),id,st.data,data=>{st.data=data;st.ver++;save();S.tab='test';render();scrollTo(0,0)});
+}
+const rateTxt={easy:'😀 쉬웠어요',good:'👍 딱 좋았어요',hard:'😵 어려웠어요'};
+function tabTest(pane,id,st){
+  const c=C[id];const rs=resultsOf(id);const cur=rs.filter(r=>r.ver===st.ver);const last=cur[cur.length-1];const passed=tested(id);
+  let advice='';
+  if(last){if(!last.ok)advice=`<div class="warn">${esc(last.solver)}이(가) 풀지 못했어요. 힌트를 넣거나, 가짜 글자를 줄이거나, 칸 수·굵기 힌트를 보여 주도록 고쳐 볼까요?</div>`;
+    else if(last.rate==='easy')advice='<div class="note">너무 쉬웠대요! 가짜 글자·섞기·힌트 숨기기로 조금 더 어렵게 고쳐 볼 수도 있어요.</div>';
+    else if(last.rate==='hard')advice='<div class="note">어려웠대요! 힌트를 더 친절하게 바꾸면 더 많은 친구가 풀 수 있어요.</div>'}
+  pane.innerHTML=`<div class="stack">
+   ${passed?`<div class="card" style="text-align:center;border-color:var(--ok);background:var(--ok-soft)"><b>✅ 이 버전은 테스트를 통과했어요!</b><p class="small" style="margin:6px 0 12px">고칠 점이 있으면 고치고, 마음에 들면 완료해요.</p><div class="row c"><button class="btn" id="tFix">✏️ 고치기</button><button class="btn primary" id="tDone">완료하기 →</button></div></div>`:''}
+   ${advice}
+   <div class="card stack"><div class="eyebrow">🧪 친구에게 시험하기</div>
+    <p style="margin:0">친구를 <b>이 컴퓨터로</b> 불러요. 친구가 자기 이름을 쓰고 시작하면 <b>정답 없이</b> 암호만 보여요. 여러 친구가 차례로 풀 수 있어요.</p>
+    <div class="row"><input id="tWho" type="text" maxlength="10" value="${esc(handName)}" placeholder="푸는 친구 이름" style="border:2px solid var(--ink);border-radius:14px;padding:10px 14px;flex:1;min-width:0;font-size:1.1rem" aria-label="푸는 친구 이름"><button class="btn primary" id="tStart">🕵️ 테스트 시작</button></div></div>
+   <div class="preview"><div class="eyebrow" style="margin-bottom:8px">👀 친구에게 보일 화면 (버전 ${st.ver})</div>${c.show(st.data,'test')}
+    <div class="row c" style="margin-top:10px"><button class="btn ghost" id="tRev">🔑 정답·힌트 확인</button></div>
+    <div id="tAns" hidden style="text-align:center;margin-top:6px"><div style="font-family:var(--display);font-size:1.3rem">${esc(c.answer(st.data))}</div>${id==='num'?`<div class="small">🔢 숫자 순서: ${numCode(st.data)}</div>`:''}${id==='pic'?`<div class="small">🖼️ 그림 순서: ${picCode(st.data)}</div>`:''}${st.data.hint?`<div class="small">💡 ${esc(st.data.hint)}</div>`:''}</div></div>
+   <div class="card"><div class="eyebrow" style="margin-bottom:6px">📋 테스트 기록</div>
+    ${rs.length?`<table class="log"><tr><th>버전</th><th>푼 친구</th><th>결과</th><th>시도</th><th>느낌</th></tr>${rs.slice().reverse().map(l=>`<tr><td>${l.ver}${l.ver===st.ver?'':' <span class="muted small">(옛)</span>'}</td><td>${esc(l.solver)}</td><td>${l.ok?'✅ 성공':'❌ 포기'}${l.hint?' 💡':''}</td><td>${l.tries}번</td><td>${l.rate?rateTxt[l.rate]:'-'}</td></tr>`).join('')}</table>`:'<p class="muted small" style="margin:0">아직 푼 친구가 없어요. 친구를 이 컴퓨터로 불러 풀게 해요.</p>'}</div>
+   ${!passed?`<div class="row c"><button class="btn ghost" id="tFix2">✏️ 테스트 전에 고치기</button></div>`:''}</div>`;
+  const start=()=>{const who=pane.querySelector('#tWho').value.trim()||'친구';handName='';solveCtx={source:'local',type:id,who,tries:0,hint:false};go('solve')};
+  pane.querySelector('#tWho').oninput=e=>{handName=e.target.value};
+  pane.querySelector('#tStart').onclick=start;
+  pane.querySelector('#tWho').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing)start()});
+  pane.querySelector('#tRev').onclick=()=>{const a=pane.querySelector('#tAns');a.hidden=!a.hidden};
+  const fix=()=>{S.tab='make';render()};
+  pane.querySelector('#tFix')&&(pane.querySelector('#tFix').onclick=fix);
+  pane.querySelector('#tFix2')&&(pane.querySelector('#tFix2').onclick=fix);
+  pane.querySelector('#tDone')&&(pane.querySelector('#tDone').onclick=()=>{S.tab='done';render()});
+}
+function tabDone(pane,id,st){
+  const c=C[id],i=IDS.indexOf(id),next=IDS[i+1];const oks=new Set(resultsOf(id).filter(l=>l.ok).map(l=>l.solver));
+  pane.innerHTML=`<div class="stack"><div class="card stack" style="text-align:center">
+    <div class="eyebrow">${st.done?'🏅 완료한 방':'마지막 확인'}</div><h3 style="font-size:1.5rem">나의 ${c.title}</h3>
+    <div style="text-align:left">${c.show(st.data,'test')}</div>
+    <p style="margin:0">정답 <b>${esc(c.answer(st.data))}</b> · 버전 ${st.ver} · 친구 ${oks.size}명 해독 성공</p></div>
+   <div class="row c"><button class="btn" id="dFix">✏️ 더 고치기</button>
+   ${st.done?(next?`<button class="btn primary" id="dNext">다음 방: ${C[next].title} →</button>`:`<button class="btn primary" id="dHome">🗺️ 지도로</button>`):`<button class="btn primary" id="dDone">🏁 이 방 완료!</button>`}</div>
+   ${st.done&&allDone()?`<div class="finish"><b>🎉 5개 방을 모두 완료했어요!</b></div>${resetBlock()}`:''}</div>`;
+  pane.querySelector('#dFix').onclick=()=>{S.tab='make';render()};
+  pane.querySelector('#dDone')&&(pane.querySelector('#dDone').onclick=()=>{st.done=true;yay();save();render()});
+  pane.querySelector('#dNext')&&(pane.querySelector('#dNext').onclick=()=>openStation(next));
+  pane.querySelector('#dHome')&&(pane.querySelector('#dHome').onclick=()=>go('home'));
+  bindReset(pane);
+}
+
+function solveView(app){
+  if(!solveCtx){go(S.sid?'station':'home',{tab:'test'});return}
+  const ctx=solveCtx,id=ctx.type,c=C[id];
+  const d=S.st[id].data;const maker=S.name;
+  const hasHint=id==='num'||id==='pic'||(d.hint&&id!=='ana');
+  app.innerHTML=`<div class="st-head"><span class="ic">🕵️</span><div><div class="eyebrow">${esc(maker)} 연구원이 만든 ${c.title}</div><h2>${esc(ctx.who)}의 해독 도전</h2></div></div>
+   <div class="stack"><div id="sv"></div>
+   <div class="row c">${hasHint?'<button class="btn" id="sHint">💡 힌트 보기</button>':''}<button class="btn ghost" id="sGive">🏳️ 포기하기</button></div><div id="sHintBox"></div><div id="sAfter"></div></div>`;
+  const record=(ok,rate)=>{S.st[id].log.push({ver:S.st[id].ver,solver:ctx.who,ok,tries:ok?ctx.tries+1:ctx.tries,rate:rate||null,hint:ctx.hint,at:Date.now()});save()};
+  const after=()=>go('handback');
+  const finish=ok=>{const box=app.querySelector('#sAfter');app.querySelector('#sGive').disabled=true;
+    if(ok){box.innerHTML=`<div class="card" style="text-align:center"><p style="margin:0 0 10px"><b>${esc(ctx.who)}</b>, 이 암호 어땠어요?</p><div class="row c"><button class="btn" data-r="easy">😀 쉬웠어요</button><button class="btn" data-r="good">👍 딱 좋았어요</button><button class="btn" data-r="hard">😵 어려웠어요</button></div></div>`;
+      box.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{record(true,b.dataset.r);after()});box.scrollIntoView({behavior:'smooth',block:'center'})}
+    else{record(false);after()}};
+  solver(app.querySelector('#sv'),id,d,{mode:'test',onOk:()=>finish(true),onWrong:()=>{ctx.tries++}});
+  app.querySelector('#sHint')&&(app.querySelector('#sHint').onclick=()=>{ctx.hint=true;
+    if((id==='num'||id==='pic')&&!ctx.partial)ctx.partial=partialWords(d.words);
+    const pw=ctx.partial;const seq=pw?(id==='num'?numCode(pw):picCode(pw)):'';
+    app.querySelector('#sHintBox').innerHTML=`<div class="note">${d.hint?`💡 ${esc(d.hint)}`:''}${pw?`${d.hint?'<br>':''}${id==='num'?'🔢 숫자':'🖼️ 그림'} 순서 일부 (${pw.n}개 중 ${pw.k}개): <b style="font-family:var(--mono);font-size:1.15rem">${seq}</b>`:''}</div>`});
+  app.querySelector('#sGive').onclick=()=>{const b=app.querySelector('#sGive');if(b.dataset.sure){finish(false)}else{b.dataset.sure='1';b.textContent='정말 포기할래요'}};
+}
+function handback(app){
+  const id=S.sid;const rs=resultsOf(id);const last=rs[rs.length-1];
+  app.innerHTML=`<div class="handback"><div class="big">🔁</div><h2 style="font-size:1.8rem;margin-top:10px">결과가 기록됐어요!<br>${esc(S.name)} 연구원을 불러 주세요</h2>
+   <p class="muted">다음 친구도 풀 수 있어요. 결과 화면에서 다시 "테스트 시작"을 눌러요.</p><button class="btn primary" id="hb">돌려받았어요 · 결과 보기</button></div>`;
+  app.querySelector('#hb').onclick=()=>{solveCtx=null;go('station',{sid:id,tab:'test'})};
+}
+function book(app){
+  const made=IDS.filter(id=>S.st[id].data);
+  app.innerHTML=`<section class="hero"><div class="eyebrow">📒 ${esc(S.name||'연구원')}의 암호 수첩</div><h1>내가 만든 암호 ${made.length}개</h1>
+   <p>${allDone()?'🎉 5개 방을 모두 완료했어요! 이 암호들로 방탈출을 만들 수 있어요.':'방을 끝낼 때마다 여기에 모여요. 6일째 방탈출 만들 때 꺼내 써요.'}</p></section>
+   <div class="stack">${made.length?made.map(id=>{const st=S.st[id],c=C[id];return `<div class="card book-item"><div class="row" style="justify-content:space-between"><b>${c.icon} ${c.title}</b><span class="chip ${st.done?'on':''}">${st.done?'완료':'진행 중'} · 버전 ${st.ver}</span></div>${c.show(st.data,'learn')}
+     <div class="row c"><button class="btn ghost" data-rev="${id}">🔑 정답 보기</button></div><div class="reveal" id="rv-${id}" hidden style="text-align:center">${esc(c.answer(st.data))}</div></div>`}).join(''):'<div class="note">아직 만든 암호가 없어요. 방 1부터 시작해 봐요!</div>'}
+   <div class="row c"><button class="btn primary" id="bkHome">🗺️ 지도로 돌아가기</button></div>
+   ${allDone()?resetBlock():''}</div>`;
+  app.querySelectorAll('[data-rev]').forEach(b=>b.onclick=()=>{const r=app.querySelector('#rv-'+b.dataset.rev);r.hidden=!r.hidden});
+  app.querySelector('#bkHome').onclick=()=>go('home');
+  bindReset(app);
+}
+$('#goHome').onclick=()=>{solveCtx=null;go('home')};
+$('#goBook').onclick=()=>{solveCtx=null;go('book')};
+render();
+</script>
+
+</body></html>
